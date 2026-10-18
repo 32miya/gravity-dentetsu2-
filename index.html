@@ -56,7 +56,13 @@ button{font-family:inherit;cursor:pointer;border:0}
 #chHint .chbtns{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:5px}
 #chHint .chbtns button{background:#ff9a1a;color:#fff;font-weight:bold;font-size:13px;padding:5px 9px;border-radius:10px;border:2px solid #fff}
 #chHint .chbtns button.best{background:#e8302a}
-#roomTag{position:fixed;left:8px;top:calc(40px + env(safe-area-inset-top));z-index:5;background:rgba(30,26,24,.85);color:#fff;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:bold;cursor:pointer}
+#myMoney{position:fixed;left:8px;top:calc(40px + env(safe-area-inset-top));z-index:5;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.95);border:3px solid #2b2420;border-radius:999px;padding:2px 12px 2px 2px;font-weight:bold;font-size:16px;box-shadow:0 2px 5px rgba(0,0,0,.25);pointer-events:none}
+#myMoney img{width:28px;height:28px;border-radius:50%;border:2px solid}
+#myMoney.neg{background:#ffe4e4;color:#c01818;border-color:#c01818}
+#myMoney .dl{position:absolute;left:100%;margin-left:6px;font-size:16px;font-weight:bold;white-space:nowrap;text-shadow:0 0 3px #fff,0 0 3px #fff;animation:mdl 1.6s ease-out forwards}
+#myMoney .dl.p{color:#d08a00}#myMoney .dl.m{color:#d02020}
+@keyframes mdl{0%{transform:translateY(6px);opacity:0}15%{transform:translateY(0);opacity:1}80%{opacity:1}100%{transform:translateY(-14px);opacity:0}}
+#roomTag{position:fixed;left:8px;top:calc(76px + env(safe-area-inset-top));z-index:5;background:rgba(30,26,24,.85);color:#fff;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:bold;cursor:pointer}
 #hostNote{position:fixed;left:50%;top:calc(70px + env(safe-area-inset-top));transform:translateX(-50%);z-index:31;background:linear-gradient(#fff6c8,#ffd84a);color:#2b2420;border:3px solid #2b2420;border-radius:16px;padding:10px 18px;font-size:17px;font-weight:bold;box-shadow:0 6px 0 rgba(0,0,0,.25);text-align:center;width:max-content;max-width:92vw;animation:hnin .35s cubic-bezier(.2,1.5,.4,1)}
 @keyframes hnin{from{transform:translateX(-50%) scale(.5);opacity:0}}
 #recon{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:40;background:#fff;border:4px solid #2b2420;border-radius:18px;padding:14px 18px;text-align:center;font-size:15px;box-shadow:0 8px 20px rgba(0,0,0,.4);width:min(90vw,380px)}
@@ -142,7 +148,7 @@ button{font-family:inherit;cursor:pointer;border:0}
 #result .awc b{font-size:13px;display:block}#result .awc span{font-size:12px}
 #result .conf{position:fixed;top:-20px;width:10px;height:14px;animation:cfall linear forwards;pointer-events:none}
 @keyframes cfall{to{transform:translateY(110vh) rotate(720deg)}}
-#minicut{position:fixed;left:50%;top:calc(52px + env(safe-area-inset-top));z-index:29;pointer-events:none;display:flex;align-items:center;gap:8px;background:#fff;border:3px solid #2b2420;border-radius:16px;padding:5px 12px 5px 5px;box-shadow:0 5px 0 rgba(0,0,0,.25);transform:translate(-50%,-30px) scale(.8);opacity:0;transition:transform .18s cubic-bezier(.2,1.5,.4,1),opacity .15s;max-width:94vw}
+#minicut{position:fixed;left:50%;top:calc(112px + env(safe-area-inset-top));z-index:29;pointer-events:none;display:flex;align-items:center;gap:8px;background:#fff;border:3px solid #2b2420;border-radius:16px;padding:5px 12px 5px 5px;box-shadow:0 5px 0 rgba(0,0,0,.25);transform:translate(-50%,-30px) scale(.8);opacity:0;transition:transform .18s cubic-bezier(.2,1.5,.4,1),opacity .15s;max-width:94vw}
 #minicut.on{transform:translate(-50%,0) scale(1);opacity:1}
 #minicut.out{transform:translate(-50%,-20px) scale(.9);opacity:0}
 #minicut.good{border-color:#e0a000}#minicut.bad{border-color:#b03030}
@@ -233,6 +239,7 @@ button{font-family:inherit;cursor:pointer;border:0}
   <div id="banner"></div>
   <div id="plist"></div>
   <div id="destTag"></div>
+  <div id="myMoney" class="hidden"></div>
   <div id="roomTag" class="hidden"></div>
   <div id="chHint" class="hidden"></div>
   <div id="tools">
@@ -275,7 +282,7 @@ button{font-family:inherit;cursor:pointer;border:0}
     <div id="qinfo">📚 問題を読み込み中…</div>
     <div id="repInfo" class="hidden"><span></span> <button id="repExp">書き出す</button> <button id="repClr">消去</button></div>
     <label class="filebtn">＋ 問題ファイル(JSON)を追加で読み込む<input type="file" id="qfile" accept=".json,application/json" multiple hidden></label>
-    <div class="howto">🚂 ルーレットで決まる目的地をめざす日本一周すごろく<br>🎲 手番の人がサイコロを振ってご当地クイズに挑戦<br>🎯 出目でジャンルと難易度が決まる<br>　1🍜グルメ・名所・祭り 2💋恋愛・大人の雑学 3🎬アニメ<br>　4📺昭和平成 5📜歴史・オカルト 6🧭地理・雑学<br>⭕ 正解なら出目の数だけ進む／❌ 不正解ならその場にとどまる<br>🏢 手番の人が正解したら、止まった駅の物件を買える<br>👑 駅の物件を全部買うと「独占」で収益・通行料2倍<br>💥 他人の独占駅に正解して止まったら、サイコロで奇数を出せば1件買い取れる<br>🟨 カード売り場で便利カードを買える（サイコロの前に使用）。順位が下の人ほど安く、最下位はプレゼントも<br>🤫 他の人の手番でもこっそり答えて当たれば賞金<br>🎯 目的地はサイコロの目でぴったり止まった時だけ到着（超えると通過）<br>🏁 目的地に決まった回数たどり着いたらゲーム終了<br>👾 目的地から一番遠い人に「グラ廃神」が取りつき悪さをする。他の人のマスを通ればなすりつけられる<br>📶 通信が切れても自動で再接続（その間はCPUが代行）。ホストが戻らない時はゲストが自動で引き継ぎ。途中参加・途中退出もOK<br>💰 全員が1周で1ヶ月、3ヶ月ごとに決算。最後は総資産で勝負！</div>
+    <div class="howto">🚂 ルーレットで決まる目的地をめざす日本一周すごろく<br>🎲 手番の人がサイコロを振ってご当地クイズに挑戦<br>🎯 出目でジャンルと難易度が決まる<br>　1🍜グルメ・名所・祭り 2💋恋愛・大人の雑学 3🎬アニメ<br>　4📺昭和平成 5📜歴史・オカルト 6🧭地理・雑学<br>⭕ 正解なら出目の数だけ進む／❌ 不正解ならその場にとどまる<br>🏢 手番の人が正解したら、止まった駅の物件を買える<br>👑 駅の物件を全部買うと「独占」で収益・通行料2倍<br>💥 他人の独占駅に正解して止まったら、サイコロで奇数を出せば1件買い取れる<br>🟨 カード売り場で便利カードを買える（サイコロの前に使用）。順位が下の人ほど安く、最下位はプレゼントも<br>🤫 他の人の手番でもこっそり答えて当たれば賞金<br>🎯 目的地はサイコロの目でぴったり止まった時だけ到着（超えると通過）<br>🏁 目的地に決まった回数たどり着いたらゲーム終了<br>👾 目的地から一番遠い人に「グラ廃神」が取りつき悪さをする。他の人のマスを通ればなすりつけられる<br>📶 通信が切れても自動で再接続（その間はCPUが代行）。ホストが戻らない時はゲストが自動で引き継ぎ。途中参加・途中退出もOK<br>💰 全員が1周で1ヶ月、3ヶ月ごとに決算。所持金がマイナスになると物件が自動で売られる。最後は総資産で勝負！</div>
   </div>
 </div>
 
@@ -604,7 +611,17 @@ function income(p){ let v=0; for(const key in state.owners) if(state.owners[key]
 
 // ===================== ホスト側ゲームロジック =====================
 let cpuTimer=null;
+// 所持金がマイナスになったら、物件を自動で売却（独占駅以外の安い物件から、購入価格で売る）
+function settleDebts(){
+  for(const p of state.players){ if(p.money>=0) continue;
+    const mine=Object.keys(state.owners).filter(k=>state.owners[k]===p.id).map(k=>{ const [st,kk]=k.split('-').map(Number); return {k,st,pr:ST[st].props[kk],mono:monopolist(st)===p.id}; })
+      .sort((a,b)=>(a.mono-b.mono)||(a.pr.price-b.pr.price));
+    if(!mine.length) continue; const sold=[]; let got=0;
+    for(const x of mine){ if(p.money>=0) break; delete state.owners[x.k]; p.money+=x.pr.price; got+=x.pr.price; sold.push(`${ST[x.st].n}「${x.pr.nm}」`); }
+    if(sold.length){ addChat('💸','#888',`${p.name} の所持金がマイナスになったため、物件${sold.length}件を売却（+${yen(got)}）：${sold.join('、')}`);
+      cutin('ui/toll',p,`借金のため<br>物件${sold.length}件を売却`,got,false); state.debtNote={seq:(state.debtNote?.seq||0)+1}; } } }
 function commit(){
+  if(isHost && state && state.phase!=='lobby') settleDebts();
   state.seq++;
   render(); if(isHost) saveHostGame();
   if(isHost){ const msg={t:'state',s:state}; conns.forEach(c=>{try{c.open&&c.send(msg);}catch(e){}}); cpuCheck(); }
@@ -1162,6 +1179,12 @@ function render(){
       if($('chHint').dataset.k!==key){ $('chHint').dataset.k=key; $('chHint').innerHTML=`<div>👆 地図の矢印をタップ（残り${l}マス）</div><div class="chbtns">${(state.chooseOpts||[]).map((o,i)=>`<button data-chb="${i}" class="${o.d===minD?'best':''}">${esc(o.dir)}方面</button>`).join('')}</div>`;
         $('chHint').querySelectorAll('[data-chb]').forEach(b=>b.onclick=()=>sendAct('choose',+b.dataset.chb)); }
       if(lastPhase!=='choice') follow=true; } else $('chHint').dataset.k=''; }
+  { const me=P(myId), mm=$('myMoney'); const show=!!me && !listMini && state.phase!=='end'; mm.classList.toggle('hidden',!show);
+    if(show){ mm.classList.toggle('neg',me.money<0); const card=(me.cards||[]).length;
+      if(mm.dataset.v!==String(me.money)||mm.dataset.c!==String(card)){ const prev=mm.dataset.v!=null&&mm.dataset.v!==''?+mm.dataset.v:null;
+        mm.innerHTML=`<img src="${iconOf(me)}" style="border-color:${me.color}">💰 ${yen(me.money)}${card?` <span style="font-size:13px">🃏${card}</span>`:''}`;
+        if(prev!=null && prev!==me.money){ const d=me.money-prev; mm.insertAdjacentHTML('beforeend',`<span class="dl ${d>0?'p':'m'}">${d>0?'+':'−'}${yenS(Math.abs(d))}</span>`); }
+        mm.dataset.v=me.money; mm.dataset.c=card; } } }
   { const rt=$('roomTag'); rt.classList.toggle('hidden',!roomCode||listMini); if(roomCode) rt.textContent=`🔑 ルーム ${roomCode}`; }
   $('destTag').classList.toggle('hidden',listMini||state.dest==null); $('destTag').textContent='🎯 '+(state.dest!=null?ST[state.dest].n:'');
   $('plist').classList.toggle('hidden',!listMini); $('plist').classList.remove('slim');
