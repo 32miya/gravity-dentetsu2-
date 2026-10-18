@@ -969,7 +969,6 @@ function renderModal(myTurn){
     const canAns=meP && !meP.finished && state.phase==='quiz', my=q.answers[myId], hint=q.hint.includes(myId);
     html=`<h2><span class="lv">🎲${q.lv}　Lv.${q.lv} ${'★'.repeat(q.lv)}${'☆'.repeat(6-q.lv)}</span>【${esc(q.st)}の${GENRES[q.lv].i}${GENRES[q.lv].n}】</h2>
     ${rev?'':`<div class="tbar"><div id="qfill"></div><span id="qtimer">${q.limit}</span></div>`}
-    <div class="qbar"><span>🎲 出目${q.d}：⭕ 正解で${q.d}マス前進／❌ 不正解で${q.d}マス後退</span></div>
     <div class="q">${esc(q.q)}</div>
     ${hint&&!rev?'<div class="hint">🍀 前回不正解だったので2択に絞られています</div>':''}
     <div class="choices">${q.choices.map((c,i)=>{ const cut=hint&&q.removed.includes(i);
