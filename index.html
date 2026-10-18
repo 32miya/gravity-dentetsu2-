@@ -6,7 +6,8 @@
 <title>ぐらびてぃ電鉄2 買い占め列島</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="peerjs.min.js"></script>
+<script>if(typeof Peer==="undefined") document.write('<script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"><\/script>');</script>
 <style>
 :root{--or:#ff7a00;--or2:#c85e00;--ink:#2b2420;--paper:#fffaf0;--br:#7a5040}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -906,6 +907,16 @@ function cpuCheck(){
 
 // ===================== 通信（PeerJS） =====================
 const PREFIX='gdt2-';
+// STUN/TURN（別々のネットワーク同士でもつながりやすくする）
+const ICE={iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']},{urls:'stun:stun.cloudflare.com:3478'},
+  {urls:['turn:eu-0.turn.peerjs.com:3478','turn:us-0.turn.peerjs.com:3478'],username:'peerjs',credential:'peerjsp'}]};
+function peerOpts(){ const o={config:ICE,debug:1}; const h=new URLSearchParams(location.search).get('peerhost'); if(h){ const [host,port]=h.split(':'); Object.assign(o,{host,port:+port||9000,path:'/',secure:false}); } return o; }
+function setNet(t,c){ const el=$('netStat'); if(el){ el.textContent=t; el.style.color=c||'#2a8a3a'; } }
+let wakeLock=null; async function keepAwake(){ try{ if(navigator.wakeLock&&!wakeLock){ wakeLock=await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release',()=>wakeLock=null); } }catch(e){} }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState!=='visible') return; keepAwake();
+  if(peer && isHost && roomCode && (peer.disconnected||peer.destroyed)){ hostReconnect(); } });
+function hostReconnect(){ if(!peer) return; setNet('🟡 再接続中…','#b8860b');
+  try{ if(peer.destroyed){ const old=peer; peer=new Peer(PREFIX+roomCode,peerOpts()); bindHostPeer(); } else peer.reconnect(); }catch(e){ setTimeout(hostReconnect,2000); } }
 function genCode(){ const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<5;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; }
 function sendAct(a,v){ if(isHost) act(myId,a,v); else if(hostConn&&hostConn.open) hostConn.send({t:'act',a,v}); }
 
@@ -914,12 +925,19 @@ function startHost(online){
   if(!online){ addCpu(); addCpu(); addCpu(); showLobby(); return; }
   if(typeof Peer==='undefined'){ $('err').textContent='通信ライブラリを読み込めませんでした'; return; }
   $('err').textContent='ルームを作成中…';
-  roomCode=genCode(); peer=new Peer(PREFIX+roomCode);
-  peer.on('open',()=>{ $('err').textContent=''; showLobby(); });
-  peer.on('error',e=>{ if(e.type==='unavailable-id'){ peer.destroy(); startHost(true); } else { $('err').textContent='通信エラー: '+e.type; } });
+  roomCode=genCode(); peer=new Peer(PREFIX+roomCode,peerOpts()); bindHostPeer(); keepAwake();
+}
+function bindHostPeer(){
+  peer.on('open',()=>{ $('err').textContent=''; setNet('🟢 参加を受付中'); if(state.phase==='lobby') showLobby(); });
+  peer.on('disconnected',()=>{ setNet('🟡 再接続中…（この画面を開いたままにしてください）','#b8860b'); setTimeout(()=>{ if(peer&&peer.disconnected&&!peer.destroyed) try{peer.reconnect();}catch(e){} },1000); });
+  peer.on('error',e=>{
+    if(e.type==='unavailable-id'){ if(state.phase==='lobby'&&!conns.length){ peer.destroy(); roomCode=genCode(); peer=new Peer(PREFIX+roomCode,peerOpts()); bindHostPeer(); render(); } else setTimeout(hostReconnect,3000); }
+    else if(['network','server-error','socket-error','socket-closed','disconnected'].includes(e.type)){ setNet('🟡 再接続中…','#b8860b'); setTimeout(hostReconnect,2500); }
+    else if(e.type!=='peer-unavailable'){ $('err').textContent='通信エラー: '+e.type; } });
   peer.on('connection',c=>{
     c.on('data',d=>onHostData(c,d));
     c.on('close',()=>onGuestLeave(c));
+    c.on('error',()=>{});
   });
 }
 function onHostData(c,d){
@@ -941,16 +959,25 @@ function onGuestLeave(c){
 }
 function startGuest(code){
   if(typeof Peer==='undefined'){ $('err').textContent='通信ライブラリを読み込めませんでした'; return; }
-  isHost=false; roomCode=code.toUpperCase(); $('err').textContent='接続中…';
-  peer=new Peer();
-  peer.on('open',id=>{
-    myId=id; hostConn=peer.connect(PREFIX+roomCode,{reliable:true});
-    const tm=setTimeout(()=>{ if(!state) $('err').textContent='ルームが見つかりません。コードを確認してください'; },9000);
-    hostConn.on('open',()=>{ hostConn.send({t:'join',name:myName}); });
-    hostConn.on('data',d=>{ if(d.t==='state'){ clearTimeout(tm); const first=!state; state=d.s; if(first){ $('title').classList.add('hidden'); } render(); } });
-    hostConn.on('close',()=>{ alert('ホストとの接続が切れました'); location.href=location.pathname; });
-  });
-  peer.on('error',e=>{ $('err').textContent = e.type==='peer-unavailable' ? 'ルームが見つかりません' : '通信エラー: '+e.type; });
+  isHost=false; roomCode=code.toUpperCase(); $('err').textContent='サーバーに接続中…';
+  let tries=0, opened=false, gotState=false, tm=null;
+  peer=new Peer(peerOpts());
+  const tryConnect=()=>{ tries++; $('err').textContent=`ルーム ${roomCode} を探しています…（${tries}回目）`;
+    hostConn=peer.connect(PREFIX+roomCode,{reliable:true});
+    clearTimeout(tm); tm=setTimeout(()=>{ if(gotState) return;
+      if(!opened){ if(tries<3) { try{hostConn.close();}catch(e){} tryConnect(); }
+        else $('err').innerHTML='ホストの端末と通信できませんでした。<br>・ホストは待機室の画面を開いたままにしてください<br>・違うネットワーク同士でつながらない場合は、同じWi-Fiにするか片方をモバイル回線にして試してください'; }
+      else $('err').textContent='接続はできましたが応答がありません。もう一度「参加」を押してください'; },8000);
+    hostConn.on('open',()=>{ opened=true; $('err').textContent='参加しています…'; hostConn.send({t:'join',name:myName}); });
+    hostConn.on('data',d=>{ if(d.t==='state'){ clearTimeout(tm); gotState=true; const first=!state; state=d.s; if(first){ $('title').classList.add('hidden'); keepAwake(); } render(); } });
+    hostConn.on('close',()=>{ if(gotState){ alert('ホストとの接続が切れました'); location.href=location.pathname+'?room='+roomCode; } });
+    hostConn.on('error',()=>{});
+  };
+  peer.on('open',id=>{ myId=id; tryConnect(); });
+  peer.on('error',e=>{
+    if(e.type==='peer-unavailable'){ if(gotState) return; clearTimeout(tm); if(tries<3) setTimeout(tryConnect,1500);
+      else $('err').innerHTML=`ルーム ${roomCode} が見つかりません。<br>・コードが正しいか確認してください<br>・ホストが待機室の画面を閉じたりアプリを切り替えると、ルームが一時的に消えることがあります。ホストに画面を開き直してもらってから、もう一度「参加」を押してください`; }
+    else if(!gotState) $('err').textContent='通信エラー: '+e.type+'（電波の良い場所でもう一度お試しください）'; });
 }
 
 // ===================== 画面（タイトル・待機室） =====================
@@ -969,7 +996,7 @@ function renderLobby(){
   if(!state || state.phase!=='lobby'){ L.classList.add('hidden'); return; }
   L.classList.remove('hidden'); $('title').classList.add('hidden');
   const online=!!roomCode;
-  $('lobbyCode').innerHTML = online ? `<div class="sub">ルームコード</div><div class="code">${roomCode}</div>` : `<div class="sub">ひとりで遊ぶ（CPUの人数を調整できます）</div>`;
+  $('lobbyCode').innerHTML = online ? `<div class="sub">ルームコード</div><div class="code">${roomCode}</div>${isHost?`<div id="netStat" class="sub" style="font-weight:bold">${peer&&peer.open?'🟢 参加を受付中':'🟡 接続中…'}</div><div class="sub" style="font-size:11px">※招待を送ったら、この画面に戻って開いたままにしてください</div>`:''}` : `<div class="sub">ひとりで遊ぶ（CPUの人数を調整できます）</div>`;
   const link=location.origin+location.pathname+'?room='+roomCode;
   $('lobbyShare').innerHTML = online && isHost ? `<button class="btn brown" id="shareBtn" style="font-size:15px;padding:8px 14px">招待リンクを送る</button>` : '';
   if($('shareBtn')) $('shareBtn').onclick=async()=>{
