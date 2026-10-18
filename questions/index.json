@@ -23,16 +23,6 @@
  "g4_showa_heisei_003.json",
  "g4_showa_heisei_004.json",
  "g4_showa_heisei_005.json",
- "g5_local_add.json",
- "g5_rekishi.json",
- "g5_rekishi_occult_002.json",
- "g5_rekishi_occult_003.json",
- "g5_rekishi_occult_004.json",
- "g5_rekishi_occult_005.json",
- "g6_chiri_zatsugaku.json",
- "g6_chiri_zatsugaku_002.json",
- "g6_chiri_zatsugaku_003.json",
- "g6_chiri_zatsugaku_004.json",
- "g6_chiri_zatsugaku_005.json",
- "g6_local_add.json"
+ "g5_net_sns.json",
+ "g6_food.json"
 ]
