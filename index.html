@@ -52,8 +52,10 @@ button{font-family:inherit;cursor:pointer;border:0}
 #plist .pc b{font-size:12px}
 #plist .more{font-size:10px;color:#888;text-align:center}
 #tools{position:fixed;right:8px;top:calc(64px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:8px;z-index:5}
-#chHint{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;background:#1e1a18;color:#fff;border:3px solid #ffb020;border-radius:999px;padding:8px 16px;font-size:15px;font-weight:bold;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,.35);pointer-events:none;animation:chb 1s ease-in-out infinite alternate}
-@keyframes chb{to{transform:translateX(-50%) translateY(-4px)}}
+#chHint{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:9;background:#1e1a18;color:#fff;border:3px solid #ffb020;border-radius:18px;padding:6px 10px;font-size:14px;font-weight:bold;box-shadow:0 3px 8px rgba(0,0,0,.35);text-align:center;width:max-content;max-width:94vw}
+#chHint .chbtns{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:5px}
+#chHint .chbtns button{background:#ff9a1a;color:#fff;font-weight:bold;font-size:13px;padding:5px 9px;border-radius:10px;border:2px solid #fff}
+#chHint .chbtns button.best{background:#e8302a}
 #destTag{position:fixed;left:8px;top:calc(8px + env(safe-area-inset-top));z-index:5;background:rgba(255,255,255,.92);border:2px solid #f0b400;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:bold;box-shadow:0 2px 5px rgba(0,0,0,.25);pointer-events:none}
 #tools button.on{background:#fff1c4;box-shadow:inset 0 0 0 3px #f0b400}
 #plist{top:calc(8px + env(safe-area-inset-top))!important}
@@ -918,7 +920,8 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState!=
 function hostReconnect(){ if(!peer) return; setNet('🟡 再接続中…','#b8860b');
   try{ if(peer.destroyed){ const old=peer; peer=new Peer(PREFIX+roomCode,peerOpts()); bindHostPeer(); } else peer.reconnect(); }catch(e){ setTimeout(hostReconnect,2000); } }
 function genCode(){ const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<5;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; }
-function sendAct(a,v){ if(isHost) act(myId,a,v); else if(hostConn&&hostConn.open) hostConn.send({t:'act',a,v}); }
+function liveConn(){ if(hostConn&&hostConn.open) return hostConn; try{ const L=(peer&&peer.connections&&peer.connections[PREFIX+roomCode])||[]; const c=L.find(x=>x.open); if(c){ hostConn=c; return c; } }catch(e){} return null; }
+function sendAct(a,v){ if(isHost) return act(myId,a,v); const c=liveConn(); if(c) c.send({t:'act',a,v}); else console.warn('no connection for',a); }
 
 function startHost(online){
   isHost=true; myId='h'; state=newState(); addPlayer('h',myName,false);
@@ -963,15 +966,15 @@ function startGuest(code){
   let tries=0, opened=false, gotState=false, tm=null;
   peer=new Peer(peerOpts());
   const tryConnect=()=>{ tries++; $('err').textContent=`ルーム ${roomCode} を探しています…（${tries}回目）`;
-    hostConn=peer.connect(PREFIX+roomCode,{reliable:true});
+    const c=peer.connect(PREFIX+roomCode,{reliable:true}); hostConn=c;
     clearTimeout(tm); tm=setTimeout(()=>{ if(gotState) return;
-      if(!opened){ if(tries<3) { try{hostConn.close();}catch(e){} tryConnect(); }
+      if(!opened){ if(tries<3) { tryConnect(); }
         else $('err').innerHTML='ホストの端末と通信できませんでした。<br>・ホストは待機室の画面を開いたままにしてください<br>・違うネットワーク同士でつながらない場合は、同じWi-Fiにするか片方をモバイル回線にして試してください'; }
       else $('err').textContent='接続はできましたが応答がありません。もう一度「参加」を押してください'; },8000);
-    hostConn.on('open',()=>{ opened=true; $('err').textContent='参加しています…'; hostConn.send({t:'join',name:myName}); });
-    hostConn.on('data',d=>{ if(d.t==='state'){ clearTimeout(tm); gotState=true; const first=!state; state=d.s; if(first){ $('title').classList.add('hidden'); keepAwake(); } render(); } });
-    hostConn.on('close',()=>{ if(gotState){ alert('ホストとの接続が切れました'); location.href=location.pathname+'?room='+roomCode; } });
-    hostConn.on('error',()=>{});
+    c.on('open',()=>{ if(opened){ try{c.close();}catch(e){} return; } opened=true; hostConn=c; $('err').textContent='参加しています…'; c.send({t:'join',name:myName}); });
+    c.on('data',d=>{ if(d.t==='state'){ hostConn=c; clearTimeout(tm); gotState=true; const first=!state; state=d.s; if(first){ $('title').classList.add('hidden'); keepAwake(); } render(); } });
+    c.on('close',()=>{ if(gotState && c===hostConn){ alert('ホストとの接続が切れました'); location.href=location.pathname+'?room='+roomCode; } });
+    c.on('error',()=>{});
   };
   peer.on('open',id=>{ myId=id; tryConnect(); });
   peer.on('error',e=>{
@@ -1022,7 +1025,10 @@ function render(){
   $('banner').innerHTML=esc(state.msg);
   // プレイヤー一覧
   { const mc=state.phase==='choice'&&state.chooser===myId; $('chHint').classList.toggle('hidden',!mc);
-    if(mc){ const l=state.moves&&state.moves[myId]?state.moves[myId].left:0; $('chHint').textContent=`👆 進む方向の矢印をタップ（残り${l}マス）`; if(lastPhase!=='choice') follow=true; } }
+    if(mc){ const l=state.moves&&state.moves[myId]?state.moves[myId].left:0; const minD=Math.min(...(state.chooseOpts||[]).map(o=>o.d)); const key=(state.chooseOpts||[]).map(o=>o.to).join(',')+':'+l;
+      if($('chHint').dataset.k!==key){ $('chHint').dataset.k=key; $('chHint').innerHTML=`<div>👆 地図の矢印をタップ（残り${l}マス）</div><div class="chbtns">${(state.chooseOpts||[]).map((o,i)=>`<button data-chb="${i}" class="${o.d===minD?'best':''}">${esc(o.dir)}方面</button>`).join('')}</div>`;
+        $('chHint').querySelectorAll('[data-chb]').forEach(b=>b.onclick=()=>sendAct('choose',+b.dataset.chb)); }
+      if(lastPhase!=='choice') follow=true; } else $('chHint').dataset.k=''; }
   $('destTag').classList.toggle('hidden',listMini||state.dest==null); $('destTag').textContent='🎯 '+(state.dest!=null?ST[state.dest].n:'');
   $('plist').classList.toggle('hidden',!listMini); $('plist').classList.remove('slim');
   const head=`<div class="head"><span>🏁 ${state.goalsDone}/${state.goalN}</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>`;
@@ -1716,14 +1722,16 @@ let tapStart=null;
 cv.addEventListener('pointerdown',e=>{ cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); tapStart=ptrs.size===1?{x:e.clientX,y:e.clientY,t:Date.now()}:null; });
 function tryArrowTap(x,y){ if(!arrowHits.length) return false; let best=null,bd=1e9;
   for(const h of arrowHits){ const d=Math.min(Math.hypot(h.x-x,h.y-y),Math.hypot(h.lx-x,h.ly-y)); if(d<bd){bd=d;best=h;} }
-  if(best && bd<44){ arrowHits=[]; sendAct('choose',best.i); return true; } return false; }
+  if(best && bd<52){ arrowHits=[]; sendAct('choose',best.i); return true; } return false; }
 cv.addEventListener('pointermove',e=>{
   if(!ptrs.has(e.pointerId)) return; const prev=ptrs.get(e.pointerId); const cur={x:e.clientX,y:e.clientY}; ptrs.set(e.pointerId,cur);
   if(ptrs.size===1){ const dx=cur.x-prev.x, dy=cur.y-prev.y; if(Math.abs(dx)+Math.abs(dy)>0){ follow=false; cam.tx-=dx/cam.z; cam.ty-=dy/cam.z; cam.x=cam.tx; cam.y=cam.ty; } }
   else if(ptrs.size===2){ const [a,b]=[...ptrs.values()]; const dist=Math.hypot(a.x-b.x,a.y-b.y);
     if(pinch0){ cam.tz=Math.max(0.15,Math.min(3,cam.tz*dist/pinch0)); cam.z=cam.tz; } pinch0=dist; follow=false; }
 });
-const up=e=>{ if(tapStart && e.type==='pointerup' && Math.hypot(e.clientX-tapStart.x,e.clientY-tapStart.y)<10 && Date.now()-tapStart.t<600) tryArrowTap(e.clientX,e.clientY); tapStart=null; ptrs.delete(e.pointerId); if(ptrs.size<2) pinch0=null; };
+let lastArrowTap=0;
+const up=e=>{ if(tapStart && e.type==='pointerup' && Math.hypot(e.clientX-tapStart.x,e.clientY-tapStart.y)<18 && Date.now()-tapStart.t<1200){ if(tryArrowTap(e.clientX,e.clientY)) lastArrowTap=Date.now(); } tapStart=null; ptrs.delete(e.pointerId); if(ptrs.size<2) pinch0=null; };
+cv.addEventListener('click',e=>{ if(Date.now()-lastArrowTap>800 && tryArrowTap(e.clientX,e.clientY)) lastArrowTap=Date.now(); });
 cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
 cv.addEventListener('wheel',e=>{ e.preventDefault(); cam.tz=Math.max(0.15,Math.min(3,cam.tz*(e.deltaY<0?1.1:0.9))); },{passive:false});
 
