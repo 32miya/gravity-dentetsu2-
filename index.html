@@ -263,7 +263,7 @@ button{font-family:inherit;cursor:pointer;border:0}
     <div id="qinfo">📚 問題を読み込み中…</div>
     <div id="repInfo" class="hidden"><span></span> <button id="repExp">書き出す</button> <button id="repClr">消去</button></div>
     <label class="filebtn">＋ 問題ファイル(JSON)を追加で読み込む<input type="file" id="qfile" accept=".json,application/json" multiple hidden></label>
-    <div class="howto">🚂 ルーレットで決まる目的地をめざす日本一周すごろく<br>🎲 手番の人がサイコロを振ってご当地クイズに挑戦<br>🎯 出目でジャンルと難易度が決まる<br>　1🍜グルメ・名所 2💋恋愛・大人の雑学 3🎎祭り・名産<br>　4📺昭和平成 5📜歴史・オカルト 6🧭地理・雑学<br>⭕ 正解なら出目の数だけ進む／❌ 不正解ならその場にとどまる<br>🏢 手番の人が正解したら、止まった駅の物件を買える<br>👑 駅の物件を全部買うと「独占」で収益・通行料2倍<br>💥 他人の独占駅に正解して止まったら、サイコロで奇数を出せば1件買い取れる<br>🟨 カード売り場で便利カードを買える（サイコロの前に使用）<br>🤫 他の人の手番でもこっそり答えて当たれば賞金<br>🏁 目的地に決まった回数たどり着いたらゲーム終了<br>💰 3ヶ月ごとに決算。最後は総資産で勝負！</div>
+    <div class="howto">🚂 ルーレットで決まる目的地をめざす日本一周すごろく<br>🎲 手番の人がサイコロを振ってご当地クイズに挑戦<br>🎯 出目でジャンルと難易度が決まる<br>　1🍜グルメ・名所 2💋恋愛・大人の雑学 3🎎祭り・名産<br>　4📺昭和平成 5📜歴史・オカルト 6🧭地理・雑学<br>⭕ 正解なら出目の数だけ進む／❌ 不正解ならその場にとどまる<br>🏢 手番の人が正解したら、止まった駅の物件を買える<br>👑 駅の物件を全部買うと「独占」で収益・通行料2倍<br>💥 他人の独占駅に正解して止まったら、サイコロで奇数を出せば1件買い取れる<br>🟨 カード売り場で便利カードを買える（サイコロの前に使用）。順位が下の人ほど安く、最下位はプレゼントも<br>🤫 他の人の手番でもこっそり答えて当たれば賞金<br>🏁 目的地に決まった回数たどり着いたらゲーム終了<br>💰 全員が1周で1ヶ月、3ヶ月ごとに決算。最後は総資産で勝負！</div>
   </div>
 </div>
 
@@ -464,12 +464,17 @@ const PRICE = {1:[300,600,1000,2500,5000],2:[500,1000,1500,2000,3000,6000,12000]
 const CARDS={
   kyuko:{n:'急行カード',ic:'🚃',price:1000,d:'このターンはサイコロ2個'},
   tokkyu:{n:'特急カード',ic:'🚄',price:3000,d:'このターンはサイコロ3個'},
-  baishu:{n:'買収カード',ic:'🏢',price:4000,d:'他の人の物件1件を半額で買い取る',tgt:'prop'},
+  baishu:{n:'買収カード',ic:'🏢',price:4000,d:'自分より資産が多い人の物件1件を半額で買い取る',tgt:'prop'},
   ashidome:{n:'足止めカード',ic:'⛔',price:2000,d:'指名した人を次の1回休みにする',tgt:'player'},
   yamawake:{n:'山分けカード',ic:'🤝',price:2500,d:'所持金トップの人から1割をもらう'},
   buttobi:{n:'ぶっとびカード',ic:'🌀',price:1500,d:'どこかの駅へワープする'},
   omamori:{n:'お守りカード',ic:'🧿',price:1500,d:'持っているだけで次の🔴マスを1回無効',passive:true}};
 const CARD_KEYS=Object.keys(CARDS), CARD_MAX=5;
+// 資産順位（0=トップ）。下位ほどカードが安い：トップ100%→最下位50%
+function rankOf(p){ const L=state.players.slice().sort((a,b)=>assets(b)-assets(a)); return L.indexOf(p); }
+function isLast(p){ return state.players.length>1 && rankOf(p)===state.players.length-1; }
+function cardRate(p){ const n=state.players.length; return n<2?1:1-0.5*rankOf(p)/(n-1); }
+function cardPrice(p,k){ return Math.round(CARDS[k].price*cardRate(p)/100)*100; }
 const SIDE_PRIZE=100; // こっそり回答の賞金（万円）×難易度
 const RATE = {1:[30,30,20,15,10],2:[30,30,30,30,20,15,10],3:[30,30,30,30,30,30,30,20,15,10]}; // 決算ごとの収益率(%)
 const START_MONEY = 10000;        // 1億円
@@ -659,8 +664,8 @@ function doStealBuy(p,k){
   addChat('💥','#888',`${p.name} が ${op.name} から ${ST[s].n}「${pr.nm}」を${yen(pr.price)}で買い取り、独占を崩した`);
   commit(); setTimeout(endTurn,2200);
 }
-function shopBuy(p,k){ const c=CARDS[k]; p.cards=p.cards||[]; if(!c||p.cards.length>=CARD_MAX||p.money<c.price) return;
-  p.money-=c.price; p.cards.push(k); cutin('ui/buy',p,`${c.n}<br>を購入！`,-c.price,true); addChat('🃏','#888',`${p.name} が ${c.n} を購入`); commit(); }
+function shopBuy(p,k){ const c=CARDS[k]; p.cards=p.cards||[]; const pr=c&&cardPrice(p,k); if(!c||p.cards.length>=CARD_MAX||p.money<pr) return;
+  p.money-=pr; p.cards.push(k); cutin('ui/buy',p,`${c.n}<br>を購入！`,-pr,true); addChat('🃏','#888',`${p.name} が ${c.n} を購入`); commit(); }
 function useCard(p,v){ const i=v&&v.i, k=(p.cards||[])[i], c=CARDS[k]; if(!c||c.passive||p.usedCard) return;
   const done=(txt)=>{ p.cards.splice(i,1); p.usedCard=true; toast(`${c.ic} ${p.name} が${c.n}を使った！<br>${txt}`); addChat(c.ic,'#888',`${p.name}：${c.n}（${strip(txt)}）`); cutin('ui/buy',p,`${c.n}<br>発動！`,0,true); commit(); };
   if(k==='kyuko'){ p.diceN=2; return done('サイコロ2個で進む'); }
@@ -671,7 +676,7 @@ function useCard(p,v){ const i=v&&v.i, k=(p.cards||[])[i], c=CARDS[k]; if(!c||c.
   if(k==='buttobi'){ const cands=ST.filter(x=>x.kind==='st'&&x.tier>0&&x.i!==p.pos&&x.i!==state.dest); const to=cands[Math.floor(Math.random()*cands.length)];
     p.pos=to.i; p.trail=[to.i]; return done(`${to.n} へワープ！`); }
   if(k==='baishu'){ const [st,kk]=String(v.t||'').split('-').map(Number); const pr=ST[st]&&ST[st].props[kk], o=pr&&ownerOf(st,kk), op=o&&P(o);
-    if(!pr||!op||o===p.id) return; const half=Math.round(pr.price/2); if(p.money<half) return;
+    if(!pr||!op||o===p.id||assets(op)<=assets(p)) return; const half=Math.round(pr.price/2); if(p.money<half) return;
     p.money-=half; op.money+=half; state.owners[pkey(st,kk)]=p.id; return done(`${op.name} の ${ST[st].n}「${pr.nm}」を ${yen(half)} で買収`); }
 }
 function doRoll(p){
@@ -820,7 +825,9 @@ function afterMove(){
   const canBuy = rm && rm.ok && ST[r.pos].props.length>0 && pidx(r.pos).some(k=>!ownerOf(r.pos,k));
   const mo = rm && rm.ok && ST[r.pos].props.length>0 ? monopolist(r.pos) : null;
   const onYellow = rm && rm.ok && !rm.rest && ST[r.pos].ev==='yellow';
-  if(onYellow){ state.phase='shop'; state.msg=`🟨 ${r.name} はカード売り場に到着！`; commit(); }
+  if(onYellow){ state.phase='shop'; state.msg=`🟨 ${r.name} はカード売り場に到着！`; state.shopGift=null;
+    if(isLast(r) && (r.cards||[]).length<CARD_MAX){ const k=CARD_KEYS[Math.floor(Math.random()*CARD_KEYS.length)]; (r.cards=r.cards||[]).push(k); state.shopGift=k; toast(`🎁 最下位の ${r.name} に<br>${CARDS[k].ic} ${CARDS[k].n} をプレゼント！`); addChat('🎁','#888',`最下位応援：${r.name} に ${CARDS[k].n} をプレゼント`); }
+    commit(); }
   else if(canBuy){ state.phase='buy'; state.msg=`⭕ 正解した ${r.name} は ${ST[r.pos].n} の物件を購入できます`; commit(); }
   else if(mo && mo!==r.id){ state.phase='steal'; state.msg=`👑 ${ST[r.pos].n} は ${P(mo).name} の独占駅！奇数を出せば1件買い取れる`; commit(); }
   else { commit(); setTimeout(endTurn, lines.length?2200:700); }
@@ -833,11 +840,11 @@ function doBuy(p,k){
   commit();
 }
 function endTurn(){
-  state.month++;
   if(state.goalsDone>=state.goalN) return endGame();
-  let settled=false; if(state.month%SETTLE_EVERY===0){ doSettle(); settled=true; }
   const n=state.players.length; let i=state.cur;
   for(let t=0;t<n;t++){ i=(i+1)%n; if(!state.players[i].finished) break; }
+  // 全員が1周したら1ヶ月進む
+  let settled=false; if(i<=state.cur){ state.month++; if(state.month%SETTLE_EVERY===0){ doSettle(); settled=true; } }
   const go=()=>{ if(state.pendingRoulette) doRoulette(()=>beginTurn(i)); else beginTurn(i); };
   if(settled){ state.phase='settle'; commit(); setTimeout(go,3000); }
   else go();
@@ -865,7 +872,7 @@ function cpuCards(p){ const cs=p.cards||[]; if(!cs.length||p.usedCard) return; c
   if(D>12 && tryUse('tokkyu')) return; if(D>6 && tryUse('kyuko')) return;
   if(lead && lead.money>p.money*1.5 && tryUse('yamawake')) return;
   if(lead && assets(lead)>assets(p)*1.3 && tryUse('ashidome',lead.id)) return;
-  if(cs.includes('baishu')){ let best=null; for(const key in state.owners){ const o=state.owners[key]; if(o===p.id) continue; const [st,kk]=key.split('-').map(Number); const pr=ST[st].props[kk]; if(pr&&p.money-pr.price/2>=2000&&(!best||pr.price>best.pr.price)) best={key,pr}; } if(best&&tryUse('baishu',best.key)) return; }
+  if(cs.includes('baishu')){ let best=null; for(const key in state.owners){ const o=state.owners[key]; if(o===p.id||assets(P(o))<=assets(p)) continue; const [st,kk]=key.split('-').map(Number); const pr=ST[st].props[kk]; if(pr&&p.money-pr.price/2>=2000&&(!best||pr.price>best.pr.price)) best={key,pr}; } if(best&&tryUse('baishu',best.key)) return; }
   if(D>35 && tryUse('buttobi')) return; }
 function cpuCheck(){
   clearTimeout(cpuTimer);
@@ -883,7 +890,7 @@ function cpuCheck(){
   const seq=state.seq;
   const later=(ms,fn)=>{ cpuTimer=setTimeout(()=>{ if(state.seq===seq) fn(); },ms); };
   if(state.phase==='roll') later(2000,()=>{ cpuCards(p); later(900,()=>act(p.id,'roll')); });
-  else if(state.phase==='shop') later(1200,()=>{ const aff=CARD_KEYS.filter(k=>p.money-CARDS[k].price>=3000); if((p.cards||[]).length<3 && aff.length && Math.random()<0.8){ act(p.id,'shopbuy',aff[Math.floor(Math.random()*aff.length)]); } else act(p.id,'endshop'); });
+  else if(state.phase==='shop') later(1200,()=>{ const aff=CARD_KEYS.filter(k=>p.money-cardPrice(p,k)>=3000); if((p.cards||[]).length<3 && aff.length && Math.random()<0.8){ act(p.id,'shopbuy',aff[Math.floor(Math.random()*aff.length)]); } else act(p.id,'endshop'); });
   else if(state.phase==='buy') later(1100,()=>{
     const s=p.pos; const cands=pidx(s).filter(k=>!ownerOf(s,k)).sort((a,b)=>ST[s].props[a].price-ST[s].props[b].price);
     const k=cands.find(k=>p.money-ST[s].props[k].price>=2000);
@@ -1156,14 +1163,16 @@ function renderModal(myTurn){
     if(!c){ cardPick=null; } else {
     html=`<h2>${c.ic} ${c.n}</h2><div class="sub">${c.d}</div>`;
     if(c.tgt==='player') html+=`<div class="stack">${state.players.filter(x=>x.id!==myId).map(x=>`<button class="btn brown" data-cuse="${x.id}">⛔ ${esc(x.name)} を足止め</button>`).join('')}</div>`;
-    else if(c.tgt==='prop'){ const L=[]; for(const key in state.owners){ const o=state.owners[key]; if(o===myId) continue; const [st,kk]=key.split('-').map(Number); const pr=ST[st].props[kk], op=P(o); if(pr&&op) L.push({key,st,pr,op}); }
+    else if(c.tgt==='prop'){ const L=[]; const myA=assets(me); for(const key in state.owners){ const o=state.owners[key]; if(o===myId) continue; const [st,kk]=key.split('-').map(Number); const pr=ST[st].props[kk], op=P(o); if(pr&&op&&assets(op)>myA) L.push({key,st,pr,op}); }
       L.sort((a,b)=>b.pr.price-a.pr.price);
-      html+= L.length?`<div class="props">`+L.slice(0,40).map(x=>`<div class="prop"><div class="info"><div class="pn">${esc(ST[x.st].n)}「${esc(x.pr.nm)}」</div><div class="pp"><span class="owner" style="background:${x.op.color}">${esc(x.op.name)}</span> ${yen(x.pr.price)} → <b>${yen(Math.round(x.pr.price/2))}</b></div></div><button class="btn" data-cuse="${x.key}" ${me.money<Math.round(x.pr.price/2)?'disabled':''}>買収</button></div>`).join('')+`</div>`:'<div class="sub">買収できる物件がまだありません</div>'; }
+      html+= L.length?`<div class="props">`+L.slice(0,40).map(x=>`<div class="prop"><div class="info"><div class="pn">${esc(ST[x.st].n)}「${esc(x.pr.nm)}」</div><div class="pp"><span class="owner" style="background:${x.op.color}">${esc(x.op.name)}</span> ${yen(x.pr.price)} → <b>${yen(Math.round(x.pr.price/2))}</b></div></div><button class="btn" data-cuse="${x.key}" ${me.money<Math.round(x.pr.price/2)?'disabled':''}>買収</button></div>`).join('')+`</div>`:'<div class="sub">自分より資産が多い人の物件がありません（あなたがトップかも？）</div>'; }
     else html+=`<div class="stack"><button class="btn" data-cuse="1">使う</button></div>`;
     html+=`<div class="stack"><button class="btn gray" data-ccancel="1">やめる</button></div>`; } }
   else if(state.phase==='shop'){ const me=P(myId), mine=myTurn;
+    const rt=cardRate(p), rk=rankOf(p)+1;
     html=`<h2>🟨 カード売り場</h2><div class="sub">所持金 ${yen(p.money)}／カード ${(p.cards||[]).length}/${CARD_MAX}枚（サイコロを振る前に使えます）</div>`+
-      CARD_KEYS.map(k=>{ const c=CARDS[k]; return `<div class="cardrow"><span class="ci">${c.ic}</span><div class="info"><div class="cn">${c.n}　<small>${yen(c.price)}</small></div><div class="cdsc">${c.d}</div></div>${mine?`<button class="btn" data-sbuyc="${k}" ${(p.money<c.price||(p.cards||[]).length>=CARD_MAX)?'disabled':''}>買う</button>`:''}</div>`; }).join('')+
+      `<div class="sidebox">${rk}位なので ${rt<1?`<b>${Math.round((1-rt)*100)}%引き</b>`:'定価'}${state.shopGift?`／🎁 最下位応援で ${CARDS[state.shopGift].ic}${CARDS[state.shopGift].n} をプレゼント！`:''}</div>`+
+      CARD_KEYS.map(k=>{ const c=CARDS[k], pr=cardPrice(p,k); return `<div class="cardrow"><span class="ci">${c.ic}</span><div class="info"><div class="cn">${c.n}　<small style="white-space:nowrap">${pr<c.price?`<s style="color:#999">${yenS(c.price)}</s> <b style="color:#d03030">${yenS(pr)}</b>`:yenS(pr)}</small></div><div class="cdsc">${c.d}</div></div>${mine?`<button class="btn" data-sbuyc="${k}" ${(p.money<pr||(p.cards||[]).length>=CARD_MAX)?'disabled':''}>買う</button>`:''}</div>`; }).join('')+
       (mine?`<div class="stack"><button class="btn gray" data-endshop="1">お店を出る</button></div>`:`<div class="sub">${esc(p.name)} が買い物中…</div>`);
   }
   else if(state.phase==='choice' && state.chooser===myId){
