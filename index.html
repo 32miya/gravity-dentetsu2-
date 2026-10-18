@@ -40,7 +40,7 @@ button{font-family:inherit;cursor:pointer;border:0}
 #plist .pc b{font-size:12px}
 #plist .more{font-size:10px;color:#888;text-align:center}
 #tools{position:fixed;right:8px;top:calc(64px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:8px;z-index:5}
-#chHint{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;background:#1e1a18;color:#fff;border:3px solid #ffb020;border-radius:999px;padding:8px 16px;font-size:15px;font-weight:bold;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,.35);pointer-events:none;animation:chb 1s ease-in-out infinite alternate}
+#chHint{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;background:#1e1a18;color:#fff;border:3px solid #ffb020;border-radius:999px;padding:8px 16px;font-size:15px;font-weight:bold;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,.35);pointer-events:none;animation:chb 1s ease-in-out infinite alternate}
 @keyframes chb{to{transform:translateX(-50%) translateY(-4px)}}
 #destTag{position:fixed;left:8px;top:calc(8px + env(safe-area-inset-top));z-index:5;background:rgba(255,255,255,.92);border:2px solid #f0b400;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:bold;box-shadow:0 2px 5px rgba(0,0,0,.25);pointer-events:none}
 #tools button.on{background:#fff1c4;box-shadow:inset 0 0 0 3px #f0b400}
@@ -88,7 +88,7 @@ button{font-family:inherit;cursor:pointer;border:0}
 #turnCut .tname{color:#fff;font-size:34px;font-weight:bold;text-shadow:3px 3px 0 #2b2420,-2px -2px 0 #2b2420,2px -2px 0 #2b2420,-2px 2px 0 #2b2420}
 #toast{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%) scale(.6);background:#fff;border:3px solid var(--or);border-radius:16px;padding:12px 18px;font-size:18px;text-align:center;z-index:25;opacity:0;transition:.25s;pointer-events:none;max-width:88vw;box-shadow:0 6px 18px rgba(0,0,0,.3)}
 #toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
-#modal{position:fixed;inset:0;display:flex;align-items:flex-end;justify-content:center;z-index:15;pointer-events:none;padding:0 10px calc(66px + env(safe-area-inset-bottom))}
+#modal{position:fixed;inset:0;display:flex;align-items:flex-end;justify-content:center;z-index:15;pointer-events:none;padding:0 10px calc(78px + env(safe-area-inset-bottom))}
 #modal.center{align-items:center;background:rgba(0,0,0,.35);pointer-events:auto}
 .card{pointer-events:auto;background:var(--paper);border:4px solid #2b2420;border-radius:20px;padding:14px;width:100%;max-width:480px;box-shadow:0 8px 0 rgba(0,0,0,.25);max-height:72vh;overflow:auto}
 .card h2{margin:0 0 6px;font-size:19px;color:#e0306a;text-align:center}
@@ -120,8 +120,11 @@ button{font-family:inherit;cursor:pointer;border:0}
 .rk .no{width:2em;font-size:20px;text-align:center}
 .rk .v{margin-left:auto;font-weight:bold}
 #chat{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(8px + env(safe-area-inset-bottom));width:min(92vw,460px);z-index:8;border-radius:14px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.3)}
-#chatHead{background:var(--or);color:#fff;padding:9px 14px;font-size:17px;display:flex;justify-content:space-between;align-items:center}
-#chatLast{font-size:13px;opacity:.9;margin-left:10px;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#chatHead{background:var(--or);color:#fff;padding:5px 14px;font-size:15px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+#chatLast{background:#fff;font-size:14px;padding:6px 12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;color:#555}
+#chat:not(.min) #chatLast{display:none}
+#chatLast.u span,#chatBody .m.u span{color:#0a58d0;font-weight:bold}
+#chatBody .m span{color:#666}
 #chatBody{background:rgba(255,255,255,.95);height:150px;overflow:auto;padding:6px 10px;font-size:14px}
 #chatBody .m{margin:2px 0;word-break:break-all}
 #chatForm{display:flex;background:#fff}
@@ -162,7 +165,8 @@ button{font-family:inherit;cursor:pointer;border:0}
   </div>
   <button id="actBtn" class="btn hidden">サイコロを振る</button>
   <div id="chat" class="min">
-    <div id="chatHead"><span>💬 チャット</span><span id="chatLast"></span><span id="chatTgl">＋</span></div>
+    <div id="chatHead"><span>💬 チャット</span><span id="chatTgl">＋</span></div>
+    <div id="chatLast"></div>
     <div id="chatBody"></div>
     <form id="chatForm"><input id="chatIn" maxlength="60" placeholder="メッセージ…" autocomplete="off"><button>送信</button></form>
   </div>
@@ -496,7 +500,7 @@ function commit(){
 }
 function toast(text,to){ state.toast={seq:(state.toast?.seq||0)+1,items:Array.isArray(text)?text:[{t:text,to:to||null}]}; }
 function cutin(img,p,ttl,amt,good,priv){ const c=state.cutin||{n:0,items:[]}; c.n++; c.items=[...c.items.slice(-7),{id:c.n,pid:priv&&p?p.id:null,img,who:p?p.name:'',col:p?p.color:'#888',ttl,amt:amt||0,good:!!good}]; state.cutin=c; }
-function addChat(n,c,t){ state.chat.push({n,c,t}); if(state.chat.length>40) state.chat.shift(); }
+function addChat(n,c,t,u){ state.chatN=(state.chatN||0)+1; state.chat.push(u?{n,c,t,u:1}:{n,c,t}); if(state.chat.length>40) state.chat.shift(); }
 
 function addPlayer(id,name,cpu){
   const used=state.players.map(p=>p.color);
@@ -530,7 +534,7 @@ function act(pid,a,v){
   if(!state) return;
   const p=P(pid);
   if(a==='chat'){ const t=String(v||'').trim().slice(0,60); if(!t) return;
-    const who=p||state.spect.find(s=>s.id===pid); addChat(who?who.name:'観戦者', p?p.color:'#888', t); commit(); return; }
+    const who=p||state.spect.find(s=>s.id===pid); addChat(who?who.name:'観戦者', p?p.color:'#888', t, true); commit(); return; }
   if(!p) return;
   if(a==='answer'){ const q=state.quiz;
     if(state.phase==='quiz' && q && p===curP() && !p.finished && !q.answers[pid] && v>=0 && v<4 && !(q.hint.includes(pid)&&q.removed.includes(v))) doAnswer(p,v);
@@ -1043,18 +1047,20 @@ setInterval(()=>{ if(!state||!state.quiz||state.phase!=='quiz') return;
   const rem=Math.max(0,state.quiz.limit-(Date.now()-qStartAt)/1000), r=rem/state.quiz.limit;
   const el=$('qtimer'); if(el) el.textContent=Math.ceil(rem)+'秒';
   const f=$('qfill'); if(f){ f.style.width=(r*100)+'%'; f.style.background=r>0.5?'#3ab54a':r>0.25?'#f0c020':'#e0302a'; } },250);
-let chatCount=0;
+let chatCount='';
 function renderChat(){
   const B=$('chatBody'); const c=state.chat;
-  if(c.length!==chatCount || (c.length && B.childElementCount!==c.length)){
-    chatCount=c.length;
-    B.innerHTML=c.map(m=>`<div class="m"><b style="color:${m.c}">${esc(m.n)}</b> ${esc(m.t)}</div>`).join('');
+  const key=(state.chatN||0)+':'+c.length;
+  if(key!==chatCount){
+    chatCount=key;
+    B.innerHTML=c.map(m=>`<div class="m${m.u?' u':''}"><b style="color:${m.c}">${esc(m.n)}</b> <span>${esc(m.t)}</span></div>`).join('');
     B.scrollTop=B.scrollHeight;
-    const l=c[c.length-1]; $('chatLast').textContent=l?`${l.n}: ${l.t}`:'';
+    const l=c[c.length-1]; const L=$('chatLast');
+    L.className=l&&l.u?'u':''; L.innerHTML=l?`<b style="color:${l.c}">${esc(l.n)}</b> <span>${esc(l.t)}</span>`:'<span style="color:#999">メッセージはまだありません</span>';
   }
 }
 $('actBtn').onclick=()=>sendAct('roll');
-$('chatHead').onclick=()=>{ const ch=$('chat'); ch.classList.toggle('min'); $('chatTgl').textContent=ch.classList.contains('min')?'＋':'－'; };
+$('chatHead').onclick=$('chatLast').onclick=()=>{ const ch=$('chat'); ch.classList.toggle('min'); $('chatTgl').textContent=ch.classList.contains('min')?'＋':'－'; };
 $('chatForm').onsubmit=e=>{ e.preventDefault(); const v=$('chatIn').value; $('chatIn').value=''; sendAct('chat',v); };
 $('followBtn').onclick=()=>{ follow=true; cam.tz=1.4; };
 $('mapBtn').onclick=()=>{ follow=false; const s=Math.min(innerWidth/WW,innerHeight/WH)*0.95; cam.tz=s; cam.tx=WW/2; cam.ty=WH/2; };
