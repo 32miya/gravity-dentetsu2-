@@ -275,7 +275,7 @@ button{font-family:inherit;cursor:pointer;border:0}
     <div id="qinfo">📚 問題を読み込み中…</div>
     <div id="repInfo" class="hidden"><span></span> <button id="repExp">書き出す</button> <button id="repClr">消去</button></div>
     <label class="filebtn">＋ 問題ファイル(JSON)を追加で読み込む<input type="file" id="qfile" accept=".json,application/json" multiple hidden></label>
-    <div class="howto">🚂 ルーレットで決まる目的地をめざす日本一周すごろく<br>🎲 手番の人がサイコロを振ってご当地クイズに挑戦<br>🎯 出目でジャンルと難易度が決まる<br>　1🍜グルメ・名所・祭り 2💋恋愛・大人の雑学 3🎬アニメ<br>　4📺昭和平成 5📜歴史・オカルト 6🧭地理・雑学<br>⭕ 正解なら出目の数だけ進む／❌ 不正解ならその場にとどまる<br>🏢 手番の人が正解したら、止まった駅の物件を買える<br>👑 駅の物件を全部買うと「独占」で収益・通行料2倍<br>💥 他人の独占駅に正解して止まったら、サイコロで奇数を出せば1件買い取れる<br>🟨 カード売り場で便利カードを買える（サイコロの前に使用）。順位が下の人ほど安く、最下位はプレゼントも<br>🤫 他の人の手番でもこっそり答えて当たれば賞金<br>🏁 目的地に決まった回数たどり着いたらゲーム終了<br>📶 通信が切れても自動で再接続（その間はCPUが代行）。ホストが戻らない時はゲストが自動で引き継ぎ。途中参加・途中退出もOK<br>💰 全員が1周で1ヶ月、3ヶ月ごとに決算。最後は総資産で勝負！</div>
+    <div class="howto">🚂 ルーレットで決まる目的地をめざす日本一周すごろく<br>🎲 手番の人がサイコロを振ってご当地クイズに挑戦<br>🎯 出目でジャンルと難易度が決まる<br>　1🍜グルメ・名所・祭り 2💋恋愛・大人の雑学 3🎬アニメ<br>　4📺昭和平成 5📜歴史・オカルト 6🧭地理・雑学<br>⭕ 正解なら出目の数だけ進む／❌ 不正解ならその場にとどまる<br>🏢 手番の人が正解したら、止まった駅の物件を買える<br>👑 駅の物件を全部買うと「独占」で収益・通行料2倍<br>💥 他人の独占駅に正解して止まったら、サイコロで奇数を出せば1件買い取れる<br>🟨 カード売り場で便利カードを買える（サイコロの前に使用）。順位が下の人ほど安く、最下位はプレゼントも<br>🤫 他の人の手番でもこっそり答えて当たれば賞金<br>🏁 目的地に決まった回数たどり着いたらゲーム終了<br>👾 目的地から一番遠い人に「ビンボット」が取りつき悪さをする。他の人のマスを通ればなすりつけられる<br>📶 通信が切れても自動で再接続（その間はCPUが代行）。ホストが戻らない時はゲストが自動で引き継ぎ。途中参加・途中退出もOK<br>💰 全員が1周で1ヶ月、3ヶ月ごとに決算。最後は総資産で勝負！</div>
   </div>
 </div>
 
@@ -480,6 +480,7 @@ const CARDS={
   ashidome:{n:'足止めカード',ic:'⛔',price:2000,d:'指名した人を次の1回休みにする',tgt:'player'},
   yamawake:{n:'山分けカード',ic:'🤝',price:2500,d:'所持金トップの人から1割をもらう'},
   buttobi:{n:'ぶっとびカード',ic:'🌀',price:1500,d:'どこかの駅へワープする'},
+  oharai:{n:'おはらいカード',ic:'🧹',price:3000,d:'取りついたビンボットを、目的地から一番遠い他の人に飛ばす'},
   omamori:{n:'お守りカード',ic:'🧿',price:1500,d:'持っているだけで次の🔴マスを1回無効',passive:true}};
 const CARD_KEYS=Object.keys(CARDS), CARD_MAX=5;
 // 資産順位（0=トップ）。下位ほどカードが安い：トップ100%→最下位50%
@@ -636,7 +637,7 @@ function startGame(){
   doRoulette(()=>beginTurn(0));
 }
 function beginTurn(i){
-  state.players.forEach(x=>x.usedCard=false);
+  state.players.forEach(x=>x.usedCard=false); state.turnNo=(state.turnNo||0)+1; if(state.binbo) state.binbo.moved=false;
   state.cur=i; state.phase='roll'; state.dice=null; state.quiz=null; state.moves=null; state.chooser=null;
   const p=curP(); state.msg=`${p.name} の手番！サイコロを振ってください`;
 
@@ -688,6 +689,8 @@ function shopBuy(p,k){ const c=CARDS[k]; p.cards=p.cards||[]; const pr=c&&cardPr
   p.money-=pr; p.cards.push(k); cutin('ui/buy',p,`${c.n}<br>を購入！`,-pr,true); addChat('🃏','#888',`${p.name} が ${c.n} を購入`); commit(); }
 function useCard(p,v){ const i=v&&v.i, k=(p.cards||[])[i], c=CARDS[k]; if(!c||c.passive||p.usedCard) return;
   const done=(txt)=>{ p.cards.splice(i,1); p.usedCard=true; toast(`${c.ic} ${p.name} が${c.n}を使った！<br>${txt}`); addChat(c.ic,'#888',`${p.name}：${c.n}（${strip(txt)}）`); cutin('ui/buy',p,`${c.n}<br>発動！`,0,true); commit(); };
+  if(k==='oharai'){ if(!state.binbo||state.binbo.pid!==p.id) return; const D=DD(); const cand=active().filter(x=>x!==p); if(!cand.length) return; const far=Math.max(...cand.map(x=>D[x.pos]??0)); const t=cand.filter(x=>(D[x.pos]??0)===far)[0];
+    state.binbo={pid:t.id,moved:true,acted:-1}; done(`${BINBO_NAME}を ${t.name} に飛ばした！`); cutin('binbo/front',t,`${BINBO_NAME}が<br>飛んできた！`,0,false); return; }
   if(k==='kyuko'){ p.diceN=2; return done('サイコロ2個で進む'); }
   if(k==='tokkyu'){ p.diceN=3; return done('サイコロ3個で進む'); }
   if(k==='yamawake'){ const top=state.players.filter(x=>x!==p).sort((a,b)=>b.money-a.money)[0]; if(!top||top.money<=0) return;
@@ -782,7 +785,8 @@ function moveTick(){
         else { state.phase='choice'; state.chooser=p.id; state.chooseOpts=opts.map(o=>optInfo(p.pos,o,m.left));
           state.msg=`${p.name}：${m.prev==null?'進む方向':'分岐'}を選んでください（${ST[p.pos].kind==='st'?ST[p.pos].n:'現在地'}・残り${m.left}マス）`; commit(); return; }
       }
-      const to=m.next; m.next=null; m.prev=p.pos; p.pos=to; p.trail.push(to); if(p.trail.length>300) p.trail.shift(); m.left--;
+      const to=m.next; m.next=null; m.prev=p.pos; p.pos=to;
+      if(state.binbo && state.binbo.pid===p.id && !state.binbo.moved){ const oth=active().filter(x=>x!==p && x.pos===to); if(oth.length){ const t=oth[Math.floor(Math.random()*oth.length)]; state.binbo.moved=true; state.binbo.pid=t.id; cutin('binbo/front',p,`なすりつけ成功！<br>→ ${esc(t.name)}`,0,true); addChat('👾','#888',`${p.name} が ${t.name} に${BINBO_NAME}をなすりつけた！`); } } p.trail.push(to); if(p.trail.length>300) p.trail.shift(); m.left--;
       if(to===state.dest && !state.pendingRoulette){ m.left=0; arrive(p); }
     } else {
       if(p.trail.length>1){ p.trail.pop(); p.pos=p.trail[p.trail.length-1]; m.left--; } else m.left=0;
@@ -797,6 +801,8 @@ const EV_RED=['財布を落とした','台風で物件を修理','税務調査�
 function arrive(p){
   const bonus=Math.round((1500+(state.tripLen||16)*200)/100)*100;
   p.money+=bonus; p.arrivals=(p.arrivals||0)+1; state.goalsDone=(state.goalsDone||0)+1; state.pendingRoulette=true;
+  { const D=DD(); const cand=active().filter(x=>x!==p); if(cand.length && state.goalsDone<state.goalN){ const far=Math.max(...cand.map(x=>D[x.pos]??0)); const fs=cand.filter(x=>(D[x.pos]??0)===far); const t=fs[Math.floor(Math.random()*fs.length)];
+    if(!state.binbo||state.binbo.pid!==t.id) binboAttach(t,'目的地から一番遠い'); } }
   toast(`🎯 ${p.name} が目的地「${ST[state.dest].n}」に一番乗り！<br>到着ボーナス ${yen(bonus)}`); cutin('arrive',p,`${ST[state.dest].n}に<br>一番乗り！`,bonus,true);
   addChat('🎯','#888',`${p.name} が ${ST[state.dest].n} に到着（+${yen(bonus)}）`);
 }
@@ -859,8 +865,24 @@ function doBuy(p,k){
   if(monopolist(s)===p.id){ cutin('mono',p,`${ST[s].n}を独占！<br>収益・通行料2倍`,0,true); toast(`👑 ${p.name} が ${ST[s].n} を独占！<br>収益・通行料が2倍に`); addChat('👑','#888',`${p.name} が ${ST[s].n} を独占`); }
   commit();
 }
+// ===== ビンボット（貧乏神役） =====
+const BINBO_NAME='ビンボット';
+function binboAttach(target,why){ if(!target) return; state.binbo={pid:target.id,moved:false,acted:-1};
+  cutin('binbo/front',target,`${BINBO_NAME}が<br>取りついた！`,0,false); addChat('👾','#888',`${BINBO_NAME}が ${target.name} に取りついた${why?'（'+why+'）':''}`); }
+function binboAct(p){
+  const r=Math.random(), cards=p.cards||[], mine=Object.keys(state.owners).filter(k=>state.owners[k]===p.id);
+  if(r<0.25 && mine.length){ const key=mine[Math.floor(Math.random()*mine.length)]; const [st,kk]=key.split('-').map(Number); const pr=ST[st].props[kk];
+    delete state.owners[key]; cutin('binbo/front',p,`${BINBO_NAME}が<br>「${esc(pr.nm)}」を勝手に売った！`,0,false); addChat('👾','#888',`${BINBO_NAME}：${p.name} の ${ST[st].n}「${pr.nm}」を勝手に手放した`); return true; }
+  if(r<0.38 && cards.length){ const i=Math.floor(Math.random()*cards.length), k=cards[i]; cards.splice(i,1);
+    cutin('binbo/front',p,`${BINBO_NAME}が<br>${CARDS[k].n}を捨てた！`,0,false); addChat('👾','#888',`${BINBO_NAME}：${p.name} の ${CARDS[k].n} を捨てた`); return true; }
+  if(r<0.62){ const amt=Math.round((300+Math.random()*1200)*(1+state.month/12)/100)*100; p.money-=amt;
+    const what=['ガラクタの壺','謎の健康器具','高すぎる絵画','使わない別荘の会員権','ニセモノの宝石'][Math.floor(Math.random()*5)];
+    cutin('binbo/front',p,`${BINBO_NAME}が<br>${what}を買った！`,-amt,false); addChat('👾','#888',`${BINBO_NAME}：${p.name} のお金で${what}を購入（−${yen(amt)}）`); return true; }
+  const amt=Math.max(500,Math.round(Math.max(0,p.money)*(0.1+Math.random()*0.1)/100)*100); p.money-=amt;
+  cutin('binbo/front',p,`${BINBO_NAME}が<br>お金を持ち去った！`,-amt,false); addChat('👾','#888',`${BINBO_NAME}：${p.name} から ${yen(amt)} を持ち去った`); return true; }
 function endTurn(){
   if(state.goalsDone>=state.goalN) return endGame();
+  { const c=curP(); if(state.binbo && c && state.binbo.pid===c.id && state.binbo.acted!==state.turnNo){ state.binbo.acted=state.turnNo; binboAct(c); state.phase='binbo'; commit(); setTimeout(endTurn,2600); return; } }
   const n=state.players.length; let i=state.cur;
   for(let t=0;t<n;t++){ i=(i+1)%n; if(!state.players[i].finished) break; }
   // 全員が1周したら1ヶ月進む
@@ -887,6 +909,7 @@ function endGame(){
 // CPU
 let cpuQuizFor=null;
 function cpuCards(p){ const cs=p.cards||[]; if(!cs.length||p.usedCard) return; const D=DD()[p.pos]||0;
+  if(state.binbo&&state.binbo.pid===p.id&&cs.includes('oharai')){ act(p.id,'card',{i:cs.indexOf('oharai')}); if(p.usedCard) return; }
   const lead=state.players.filter(x=>x!==p).sort((a,b)=>assets(b)-assets(a))[0];
   const tryUse=(k,t)=>{ const i=cs.indexOf(k); if(i<0) return false; act(p.id,'card',{i,t}); return p.usedCard; };
   if(D>12 && tryUse('tokkyu')) return; if(D>6 && tryUse('kyuko')) return;
@@ -1145,14 +1168,14 @@ function render(){
   const head=`<div class="head"><span>🏁 ${state.goalsDone}/${state.goalN}</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>`;
   if(false) $('plist').innerHTML=head+`<div class="strip">`+state.players.map((p,i)=>`<div class="pc ${i===state.cur&&state.phase!=='end'?'cur':''}"><span class="dot" style="background:${p.color}"></span><span class="nm">${esc(p.name)}</span><b class="${p.money<0?'neg':''}">${yenS(p.money)}</b></div>`).join('')+`</div>`;
   else $('plist').innerHTML=`<div class="head"><span>📅 ${state.month}ヶ月目</span><span>🏁 目的地 ${state.goalsDone}/${state.goalN}${isHost?` <button class="gbtn" data-goal="-1">−</button><button class="gbtn" data-goal="1">＋</button>`:''}</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>`+
-   state.players.map((p,i)=>`<div class="row ${i===state.cur&&state.phase!=='end'?'cur':''}"><img class="pic" src="${iconOf(p)}" style="border-color:${p.color}"><span class="nm">${p.away?'📶':p.cpu?'🤖':''}${esc(p.name)}</span>
+   state.players.map((p,i)=>`<div class="row ${i===state.cur&&state.phase!=='end'?'cur':''}"><img class="pic" src="${iconOf(p)}" style="border-color:${p.color}"><span class="nm">${p.away?'📶':p.cpu?'🤖':''}${esc(p.name)}${state.binbo&&state.binbo.pid===p.id?'👾':''}</span>
    <span>${ST[p.pos].n}</span><span class="left">${state.dest!=null?'(あと'+DD()[p.pos]+')':''}</span>${p.rest?'🌀':''}${p.express?'🎫':''}${p.lucky?'🍀':''}
    ${(p.cards||[]).length?`<span title="カード">🃏${p.cards.length}</span>`:''}<span class="mon ${p.money<0?'neg':''}">${yen(p.money)}</span></div>`).join('')+`<div class="more">タップで閉じる</div>`;
   // 行動ボタン
   const me=curP(); const myTurn=me && me.id===myId && !me.cpu;
   $('actBtn').classList.toggle('hidden', !(myTurn && state.phase==='roll') || !!cardPick);
   { const show=myTurn && state.phase==='roll' && (me.cards||[]).length && !cardPick; const B=$('cardBar'); B.classList.toggle('hidden',!show);
-    if(show){ B.innerHTML=`<div class="cdh">🃏 サイコロの前にカードを使える${me.usedCard?'（このターンは使用済み）':''}${me.diceN?`　🎲×${me.diceN}`:''}</div>`+me.cards.map((k,i)=>{ const c=CARDS[k]; return `<button class="cd" data-cd="${i}" ${(c.passive||me.usedCard)?'disabled':''}><span class="ci">${c.ic}</span>${c.n.replace('カード','')}</button>`; }).join('');
+    if(show){ B.innerHTML=`<div class="cdh">🃏 サイコロの前にカードを使える${me.usedCard?'（このターンは使用済み）':''}${me.diceN?`　🎲×${me.diceN}`:''}</div>`+me.cards.map((k,i)=>{ const c=CARDS[k]; return `<button class="cd" data-cd="${i}" ${(c.passive||me.usedCard||(k==='oharai'&&!(state.binbo&&state.binbo.pid===me.id)))?'disabled':''}><span class="ci">${c.ic}</span>${c.n.replace('カード','')}</button>`; }).join('');
       B.querySelectorAll('[data-cd]').forEach(b=>b.onclick=()=>{ cardPick={i:+b.dataset.cd}; render(); }); } }
   $('actBtn').textContent = me&&me.express ? 'サイコロを振る（2個）' : 'サイコロを振る';
   // ターン切替で追従
@@ -1278,7 +1301,7 @@ function showRoulette(R){ const el=$('roul'), nm=$('roulName'), sub=$('roulSub')
   spin(); }
 let toastTm=null;
 const CUT_IMG={}; ['arrive','mono','steal','settle','typhoon','express','fest',...[0,1,2,3,4,5,6,7].flatMap(i=>['b'+i,'r'+i])].forEach(k=>{ const im=new Image(); im.src='cuts/'+k+'.webp'; CUT_IMG[k]=im; });
-['ok','ng','buy','stealfail','toll','startband','lastmonth','rank1','rank2','rank3','ranklast','endband','resultbg'].forEach(k=>{ const im=new Image(); im.src='ui/'+k+'.webp'; });
+['../binbo/front','ok','ng','buy','stealfail','toll','startband','lastmonth','rank1','rank2','rank3','ranklast','endband','resultbg'].forEach(k=>{ const im=new Image(); im.src='ui/'+k+'.webp'; });
 const BAND_OF=['red','blue','green','orange','purple','pink','cyan','yellow']; function bandKey(p){ const i=COLORS.indexOf(p.color); return BAND_OF[i<0?0:i]; }
 function iconOf(p){ return 'ui/face_'+bandKey(p)+'.webp'; }
 BAND_OF.forEach(k=>{ const a=new Image(); a.src='ui/band_'+k+'.webp'; const b=new Image(); b.src='ui/face_'+k+'.webp'; });
@@ -1818,7 +1841,22 @@ function frame(now){
         ctx.beginPath(); ctx.moveTo(x-7*DPR,ay-6*DPR); ctx.lineTo(x+7*DPR,ay-6*DPR); ctx.lineTo(x,ay+2*DPR); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     }
   }
+  drawBinbo(t);
   drawChoiceArrows(t);
+}
+// ビンボットの描画（取りついた人の電車のそばを歩く）
+const BIN_IMG={}; ['front','walk1','walk2','walk3','walk4','walk5','walk6','walk7','walk8'].forEach(k=>{ const im=new Image(); im.src='binbo/'+k+'.webp'; BIN_IMG[k]=im; });
+let binDisp=null;
+function drawBinbo(t){
+  if(!state||!state.binbo||state.phase==='lobby') return; const p=P(state.binbo.pid); if(!p) return; const dp=disp[p.id]; if(!dp) return;
+  const tx=dp.x+(dp.flip?14:-14), ty=dp.y-6;
+  if(!binDisp) binDisp={x:tx,y:ty,flip:false};
+  const dx=tx-binDisp.x, dy=ty-binDisp.y, moving=Math.hypot(dx,dy)>1; if(Math.abs(dx)>0.6) binDisp.flip=dx<0;
+  binDisp.x+=dx*0.12; binDisp.y+=dy*0.12;
+  const [x,y]=w2s(binDisp.x,binDisp.y); const k=moving?'walk'+(1+Math.floor(t/90)%8):'front'; const im=BIN_IMG[k]; if(!im||!im.complete||!im.naturalWidth) return;
+  const h=46*DPR*Math.min(1.3,Math.max(0.7,cam.z)), w=h*im.naturalWidth/im.naturalHeight, bob=moving?0:Math.sin(t/300)*2*DPR;
+  ctx.save(); ctx.globalAlpha=0.35; ctx.fillStyle='#000'; ctx.beginPath(); ctx.ellipse(x,y+2*DPR,w*0.35,h*0.08,0,0,7); ctx.fill(); ctx.restore();
+  ctx.save(); ctx.translate(x,y-h+bob); if(moving&&binDisp.flip){ ctx.scale(-1,1); } ctx.shadowColor='rgba(170,60,255,.8)'; ctx.shadowBlur=10*DPR; ctx.drawImage(im,-w/2,0,w,h); ctx.restore();
 }
 // 進行方向の矢印（マップ上でタップして選ぶ）
 let arrowHits=[];
