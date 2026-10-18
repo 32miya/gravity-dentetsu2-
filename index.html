@@ -275,7 +275,7 @@ button{font-family:inherit;cursor:pointer;border:0}
     <div id="qinfo">📚 問題を読み込み中…</div>
     <div id="repInfo" class="hidden"><span></span> <button id="repExp">書き出す</button> <button id="repClr">消去</button></div>
     <label class="filebtn">＋ 問題ファイル(JSON)を追加で読み込む<input type="file" id="qfile" accept=".json,application/json" multiple hidden></label>
-    <div class="howto">🚂 ルーレットで決まる目的地をめざす日本一周すごろく<br>🎲 手番の人がサイコロを振ってご当地クイズに挑戦<br>🎯 出目でジャンルと難易度が決まる<br>　1🍜グルメ・名所・祭り 2💋恋愛・大人の雑学 3🎬アニメ<br>　4📺昭和平成 5📜歴史・オカルト 6🧭地理・雑学<br>⭕ 正解なら出目の数だけ進む／❌ 不正解ならその場にとどまる<br>🏢 手番の人が正解したら、止まった駅の物件を買える<br>👑 駅の物件を全部買うと「独占」で収益・通行料2倍<br>💥 他人の独占駅に正解して止まったら、サイコロで奇数を出せば1件買い取れる<br>🟨 カード売り場で便利カードを買える（サイコロの前に使用）。順位が下の人ほど安く、最下位はプレゼントも<br>🤫 他の人の手番でもこっそり答えて当たれば賞金<br>🏁 目的地に決まった回数たどり着いたらゲーム終了<br>👾 目的地から一番遠い人に「グラ廃神」が取りつき悪さをする。他の人のマスを通ればなすりつけられる<br>📶 通信が切れても自動で再接続（その間はCPUが代行）。ホストが戻らない時はゲストが自動で引き継ぎ。途中参加・途中退出もOK<br>💰 全員が1周で1ヶ月、3ヶ月ごとに決算。最後は総資産で勝負！</div>
+    <div class="howto">🚂 ルーレットで決まる目的地をめざす日本一周すごろく<br>🎲 手番の人がサイコロを振ってご当地クイズに挑戦<br>🎯 出目でジャンルと難易度が決まる<br>　1🍜グルメ・名所・祭り 2💋恋愛・大人の雑学 3🎬アニメ<br>　4📺昭和平成 5📜歴史・オカルト 6🧭地理・雑学<br>⭕ 正解なら出目の数だけ進む／❌ 不正解ならその場にとどまる<br>🏢 手番の人が正解したら、止まった駅の物件を買える<br>👑 駅の物件を全部買うと「独占」で収益・通行料2倍<br>💥 他人の独占駅に正解して止まったら、サイコロで奇数を出せば1件買い取れる<br>🟨 カード売り場で便利カードを買える（サイコロの前に使用）。順位が下の人ほど安く、最下位はプレゼントも<br>🤫 他の人の手番でもこっそり答えて当たれば賞金<br>🎯 目的地はサイコロの目でぴったり止まった時だけ到着（超えると通過）<br>🏁 目的地に決まった回数たどり着いたらゲーム終了<br>👾 目的地から一番遠い人に「グラ廃神」が取りつき悪さをする。他の人のマスを通ればなすりつけられる<br>📶 通信が切れても自動で再接続（その間はCPUが代行）。ホストが戻らない時はゲストが自動で引き継ぎ。途中参加・途中退出もOK<br>💰 全員が1周で1ヶ月、3ヶ月ごとに決算。最後は総資産で勝負！</div>
   </div>
 </div>
 
@@ -766,9 +766,9 @@ function revealQuiz(){
 }
 // ---- 移動（桃鉄式：進行方向は自由。同じ移動中に来た道は戻れない） ----
 function optsAt(pos,prev){ let o=ADJ[pos].filter(x=>x!==prev); if(!o.length) o=ADJ[pos].slice(); return o; }
-function greedyLand(from,first,r){ const D=DD(); let prev=from, cur=first, hit=cur===state.dest, path=[cur];
-  for(let k=1;k<r&&!hit;k++){ const o=optsAt(cur,prev).sort((a,b)=>D[a]-D[b]); prev=cur; cur=o[0]; path.push(cur); if(cur===state.dest) hit=true; }
-  return {land:cur,hit,path}; }
+function greedyLand(from,first,r){ const D=DD(); let prev=from, cur=first, path=[cur];
+  for(let k=1;k<r;k++){ const o=optsAt(cur,prev).sort((a,b)=>D[a]-D[b]); prev=cur; cur=o[0]; path.push(cur); }
+  return {land:cur,hit:cur===state.dest,path}; }
 function optInfo(pos,o,r){ const g=greedyLand(pos,o,r); return {to:o,land:g.land,hit:g.hit,d:DD()[o]+1,dir:routePreview(pos,o),line:EDGE_LINE[pos+'>'+o]||''}; }
 function cpuPick(pos,opts,r){ const D=DD(); let best=opts[0], bs=1e9;
   for(const o of opts){ const g=greedyLand(pos,o,r); const ev=ST[g.land].ev; const sc=g.hit?-999:D[g.land]+(ev==='red'?5:ev==='blue'?-1.5:0)+Math.random()*0.5; if(sc<bs){bs=sc;best=o;} }
@@ -787,7 +787,7 @@ function moveTick(){
       }
       const to=m.next; m.next=null; m.prev=p.pos; p.pos=to;
       if(state.binbo && state.binbo.pid===p.id && !state.binbo.moved){ const oth=active().filter(x=>x!==p && x.pos===to); if(oth.length){ const t=oth[Math.floor(Math.random()*oth.length)]; state.binbo.moved=true; state.binbo.pid=t.id; cutin('binbo/front',p,`なすりつけ成功！<br>→ ${esc(t.name)}`,0,true); addChat('👾','#888',`${p.name} が ${t.name} に${BINBO_NAME}をなすりつけた！`); } } p.trail.push(to); if(p.trail.length>300) p.trail.shift(); m.left--;
-      if(to===state.dest && !state.pendingRoulette){ m.left=0; arrive(p); }
+      if(to===state.dest && !state.pendingRoulette && m.left===0){ arrive(p); } // ぴったり止まった時だけ到着（超える時は通過）
     } else {
       if(p.trail.length>1){ p.trail.pop(); p.pos=p.trail[p.trail.length-1]; m.left--; } else m.left=0;
     }
@@ -1216,8 +1216,7 @@ const DFACES=[ {n:[0,0,1],u:[1,0,0],v:[0,1,0],val:1}, {n:[0,0,-1],u:[-1,0,0],v:[
 // 各目を手前（+Z）に向ける回転を探す
 const DBASE={}; (()=>{ const qs=[0,1,2,3].map(k=>k*Math.PI/2);
   for(const f of DFACES){ outer: for(const a of qs) for(const b of qs){ const R=M3.mul(M3.rx(a),M3.ry(b)); const n=M3.ap(R,f.n); if(n[2]>0.99){ DBASE[f.val]=R; break outer; } } } })();
-// 出目の面を「上面」にし、斜め上から見下ろす角度で止める（上面がよく見えるよう約43°傾ける）
-const DTILT=M3.mul(M3.ry(0.5),M3.rx(0.75));
+const DTILT=M3.mul(M3.rx(-0.2),M3.ry(0.2)); // 出目の面を真正面（真上から見下ろした向き）で止める。ほんの少しだけ傾けて立体感を残す
 function drawDie3D(c,x,y,S,R,ex){
   const h=S*0.5, L=[-0.35,-0.55,0.76];
   const proj=v=>{ const z=v[2]; const k=1/(1-z*0.12); return [x+v[0]*h*k, y+v[1]*h*k, z]; };
@@ -1230,7 +1229,7 @@ function drawDie3D(c,x,y,S,R,ex){
     const rr=0.22, path=[]; const corners=[[1,1],[-1,1],[-1,-1],[1,-1]];
     for(let k=0;k<4;k++){ const [cu,cv]=corners[k]; const a0=Math.atan2(cv,cu)-Math.PI/4;
       for(let m=0;m<=4;m++){ const a=a0+m*(Math.PI/2)/4; path.push(pt(cu*(1-rr)+Math.cos(a)*rr, cv*(1-rr)+Math.sin(a)*rr)); } }
-    const lit=Math.max(0,n[0]*L[0]+n[1]*L[1]+n[2]*L[2]); const sh=0.62+0.38*lit;
+    const lit=Math.max(0,n[0]*L[0]+n[1]*L[1]+n[2]*L[2]); const sh=0.7+0.3*lit+(n[2]>0.9?0.08:0);
     const base=ex?[255,216,74]:[255,255,255];
     c.fillStyle=`rgb(${Math.round(base[0]*sh)},${Math.round(base[1]*sh)},${Math.round(base[2]*sh)})`;
     c.beginPath(); path.forEach((q,k)=>k?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1])); c.closePath(); c.fill();
