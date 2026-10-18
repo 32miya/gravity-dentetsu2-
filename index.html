@@ -1425,7 +1425,7 @@ function drawChoiceArrows(t){
   const MIN=0.62;
   for(let it=0;it<6;it++) for(let k=0;k<arr.length;k++){ const A=arr[k], B=arr[(k+1)%arr.length]; if(arr.length<2) break;
     let d=B.a-A.a; if(k===arr.length-1) d+=Math.PI*2; if(d<MIN){ const push=(MIN-d)/2; A.a-=push; B.a+=push; } }
-  const R=78*DPR, pulse=(Math.sin(t/200)+1)/2;
+  const R=78*DPR, pulse=(Math.sin(t/200)+1)/2; const minD=Math.min(...state.chooseOpts.map(o=>o.d));
   for(const A of arr){
     const ux=Math.cos(A.a), uy=Math.sin(A.a), px=-uy, py=ux;
     const ax=cx+ux*R, ay=cy+uy*R, L=30*DPR, W=17*DPR, sh=9*DPR;
@@ -1438,7 +1438,7 @@ function drawChoiceArrows(t){
     ctx.beginPath(); pts.forEach((q,k)=>k?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.closePath();
     ctx.lineJoin='round'; ctx.lineWidth=7*DPR; ctx.strokeStyle='#1e1a18'; ctx.stroke();
     ctx.lineWidth=3.5*DPR; ctx.strokeStyle='#fff'; ctx.stroke();
-    ctx.fillStyle=`hsl(${28+pulse*10},100%,${52+pulse*6}%)`; ctx.fill();
+    const best=A.o.d===minD; ctx.fillStyle=best?`hsl(${356+pulse*6},90%,${48+pulse*6}%)`:`hsl(${28+pulse*10},100%,${52+pulse*6}%)`; ctx.fill();
     // 方面ラベル
     const lab=A.o.dir+' 方面'; ctx.font=`bold ${Math.round(12*DPR)}px sans-serif`; const tw=ctx.measureText(lab).width;
     const lx=ax+ux*(L*0.6+20*DPR), ly=ay+uy*(L*0.6+16*DPR);
