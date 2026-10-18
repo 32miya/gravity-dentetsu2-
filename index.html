@@ -40,6 +40,8 @@ button{font-family:inherit;cursor:pointer;border:0}
 #plist .pc b{font-size:12px}
 #plist .more{font-size:10px;color:#888;text-align:center}
 #tools{position:fixed;right:8px;top:calc(64px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:8px;z-index:5}
+#tools button.on{background:#fff1c4;box-shadow:inset 0 0 0 3px #f0b400}
+#plist{top:calc(8px + env(safe-area-inset-top))!important}
 #tools button{width:44px;height:44px;border-radius:50%;background:#fff;font-size:20px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
 #actBtn{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(120px + env(safe-area-inset-bottom));z-index:6;font-size:22px;padding:14px 40px;white-space:nowrap}
 #actBtn:active{transform:translateX(-50%) translateY(3px)}
@@ -839,9 +841,9 @@ function render(){
   if(!inGame) return;
   $('banner').innerHTML=esc(state.msg);
   // プレイヤー一覧
-  $('plist').classList.toggle('slim',!listMini);
+  $('plist').classList.toggle('hidden',!listMini); $('plist').classList.remove('slim');
   const head=`<div class="head"><span>📅 ${Math.min(state.month,state.maxMonth)}/${state.maxMonth}ヶ月</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>`;
-  if(!listMini) $('plist').innerHTML=head+`<div class="strip">`+state.players.map((p,i)=>`<div class="pc ${i===state.cur&&state.phase!=='end'?'cur':''}"><span class="dot" style="background:${p.color}"></span><span class="nm">${esc(p.name)}</span><b class="${p.money<0?'neg':''}">${yenS(p.money)}</b></div>`).join('')+`</div>`;
+  if(false) $('plist').innerHTML=head+`<div class="strip">`+state.players.map((p,i)=>`<div class="pc ${i===state.cur&&state.phase!=='end'?'cur':''}"><span class="dot" style="background:${p.color}"></span><span class="nm">${esc(p.name)}</span><b class="${p.money<0?'neg':''}">${yenS(p.money)}</b></div>`).join('')+`</div>`;
   else $('plist').innerHTML=`<div class="head"><span>📅 ${Math.min(state.month,state.maxMonth)}/${state.maxMonth}ヶ月</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>`+
    state.players.map((p,i)=>`<div class="row ${i===state.cur&&state.phase!=='end'?'cur':''}"><span class="dot" style="background:${p.color}"></span><span class="nm">${p.cpu?"🤖":""}${esc(p.name)}</span>
    <span>${ST[p.pos].n}</span><span class="left">${state.dest!=null?'(あと'+DD()[p.pos]+')':''}</span>${p.rest?'🌀':''}${p.express?'🎫':''}${p.lucky?'🍀':''}
@@ -1037,7 +1039,7 @@ $('chatHead').onclick=()=>{ const ch=$('chat'); ch.classList.toggle('min'); $('c
 $('chatForm').onsubmit=e=>{ e.preventDefault(); const v=$('chatIn').value; $('chatIn').value=''; sendAct('chat',v); };
 $('followBtn').onclick=()=>{ follow=true; cam.tz=1.4; };
 $('mapBtn').onclick=()=>{ follow=false; const s=Math.min(innerWidth/WW,innerHeight/WH)*0.95; cam.tz=s; cam.tx=WW/2; cam.ty=WH/2; };
-$('listBtn').onclick=$('plist').onclick=()=>{ listMini=!listMini; render(); };
+$('listBtn').onclick=$('plist').onclick=()=>{ listMini=!listMini; $('listBtn').classList.toggle('on',listMini); render(); };
 
 // ===================== マップ描画 =====================
 const cv=$('cv'), ctx=cv.getContext('2d');
