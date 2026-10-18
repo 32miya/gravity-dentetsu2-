@@ -40,6 +40,7 @@ button{font-family:inherit;cursor:pointer;border:0}
 #plist .pc b{font-size:12px}
 #plist .more{font-size:10px;color:#888;text-align:center}
 #tools{position:fixed;right:8px;top:calc(64px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:8px;z-index:5}
+#destTag{position:fixed;left:8px;top:calc(8px + env(safe-area-inset-top));z-index:5;background:rgba(255,255,255,.92);border:2px solid #f0b400;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:bold;box-shadow:0 2px 5px rgba(0,0,0,.25);pointer-events:none}
 #tools button.on{background:#fff1c4;box-shadow:inset 0 0 0 3px #f0b400}
 #plist{top:calc(8px + env(safe-area-inset-top))!important}
 #tools button{width:44px;height:44px;border-radius:50%;background:#fff;font-size:20px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
@@ -143,6 +144,7 @@ button{font-family:inherit;cursor:pointer;border:0}
 <div id="game" class="hidden">
   <div id="banner"></div>
   <div id="plist"></div>
+  <div id="destTag"></div>
   <div id="tools">
     <button id="followBtn" title="現在地へ">📍</button>
     <button id="mapBtn" title="全体地図">🗾</button>
@@ -841,6 +843,7 @@ function render(){
   if(!inGame) return;
   $('banner').innerHTML=esc(state.msg);
   // プレイヤー一覧
+  $('destTag').classList.toggle('hidden',listMini||state.dest==null); $('destTag').textContent='🎯 '+(state.dest!=null?ST[state.dest].n:'');
   $('plist').classList.toggle('hidden',!listMini); $('plist').classList.remove('slim');
   const head=`<div class="head"><span>📅 ${Math.min(state.month,state.maxMonth)}/${state.maxMonth}ヶ月</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>`;
   if(false) $('plist').innerHTML=head+`<div class="strip">`+state.players.map((p,i)=>`<div class="pc ${i===state.cur&&state.phase!=='end'?'cur':''}"><span class="dot" style="background:${p.color}"></span><span class="nm">${esc(p.name)}</span><b class="${p.money<0?'neg':''}">${yenS(p.money)}</b></div>`).join('')+`</div>`;
