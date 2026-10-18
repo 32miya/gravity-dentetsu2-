@@ -275,7 +275,7 @@ button{font-family:inherit;cursor:pointer;border:0}
     <div id="qinfo">📚 問題を読み込み中…</div>
     <div id="repInfo" class="hidden"><span></span> <button id="repExp">書き出す</button> <button id="repClr">消去</button></div>
     <label class="filebtn">＋ 問題ファイル(JSON)を追加で読み込む<input type="file" id="qfile" accept=".json,application/json" multiple hidden></label>
-    <div class="howto">🚂 ルーレットで決まる目的地をめざす日本一周すごろく<br>🎲 手番の人がサイコロを振ってご当地クイズに挑戦<br>🎯 出目でジャンルと難易度が決まる<br>　1🍜グルメ・名所・祭り 2💋恋愛・大人の雑学 3🎬アニメ<br>　4📺昭和平成 5📜歴史・オカルト 6🧭地理・雑学<br>⭕ 正解なら出目の数だけ進む／❌ 不正解ならその場にとどまる<br>🏢 手番の人が正解したら、止まった駅の物件を買える<br>👑 駅の物件を全部買うと「独占」で収益・通行料2倍<br>💥 他人の独占駅に正解して止まったら、サイコロで奇数を出せば1件買い取れる<br>🟨 カード売り場で便利カードを買える（サイコロの前に使用）。順位が下の人ほど安く、最下位はプレゼントも<br>🤫 他の人の手番でもこっそり答えて当たれば賞金<br>🏁 目的地に決まった回数たどり着いたらゲーム終了<br>👾 目的地から一番遠い人に「ビンボット」が取りつき悪さをする。他の人のマスを通ればなすりつけられる<br>📶 通信が切れても自動で再接続（その間はCPUが代行）。ホストが戻らない時はゲストが自動で引き継ぎ。途中参加・途中退出もOK<br>💰 全員が1周で1ヶ月、3ヶ月ごとに決算。最後は総資産で勝負！</div>
+    <div class="howto">🚂 ルーレットで決まる目的地をめざす日本一周すごろく<br>🎲 手番の人がサイコロを振ってご当地クイズに挑戦<br>🎯 出目でジャンルと難易度が決まる<br>　1🍜グルメ・名所・祭り 2💋恋愛・大人の雑学 3🎬アニメ<br>　4📺昭和平成 5📜歴史・オカルト 6🧭地理・雑学<br>⭕ 正解なら出目の数だけ進む／❌ 不正解ならその場にとどまる<br>🏢 手番の人が正解したら、止まった駅の物件を買える<br>👑 駅の物件を全部買うと「独占」で収益・通行料2倍<br>💥 他人の独占駅に正解して止まったら、サイコロで奇数を出せば1件買い取れる<br>🟨 カード売り場で便利カードを買える（サイコロの前に使用）。順位が下の人ほど安く、最下位はプレゼントも<br>🤫 他の人の手番でもこっそり答えて当たれば賞金<br>🏁 目的地に決まった回数たどり着いたらゲーム終了<br>👾 目的地から一番遠い人に「グラ廃神」が取りつき悪さをする。他の人のマスを通ればなすりつけられる<br>📶 通信が切れても自動で再接続（その間はCPUが代行）。ホストが戻らない時はゲストが自動で引き継ぎ。途中参加・途中退出もOK<br>💰 全員が1周で1ヶ月、3ヶ月ごとに決算。最後は総資産で勝負！</div>
   </div>
 </div>
 
@@ -480,7 +480,7 @@ const CARDS={
   ashidome:{n:'足止めカード',ic:'⛔',price:2000,d:'指名した人を次の1回休みにする',tgt:'player'},
   yamawake:{n:'山分けカード',ic:'🤝',price:2500,d:'所持金トップの人から1割をもらう'},
   buttobi:{n:'ぶっとびカード',ic:'🌀',price:1500,d:'どこかの駅へワープする'},
-  oharai:{n:'おはらいカード',ic:'🧹',price:3000,d:'取りついたビンボットを、目的地から一番遠い他の人に飛ばす'},
+  oharai:{n:'おはらいカード',ic:'🧹',price:3000,d:'取りついたグラ廃神を、目的地から一番遠い他の人に飛ばす'},
   omamori:{n:'お守りカード',ic:'🧿',price:1500,d:'持っているだけで次の🔴マスを1回無効',passive:true}};
 const CARD_KEYS=Object.keys(CARDS), CARD_MAX=5;
 // 資産順位（0=トップ）。下位ほどカードが安い：トップ100%→最下位50%
@@ -865,8 +865,8 @@ function doBuy(p,k){
   if(monopolist(s)===p.id){ cutin('mono',p,`${ST[s].n}を独占！<br>収益・通行料2倍`,0,true); toast(`👑 ${p.name} が ${ST[s].n} を独占！<br>収益・通行料が2倍に`); addChat('👑','#888',`${p.name} が ${ST[s].n} を独占`); }
   commit();
 }
-// ===== ビンボット（貧乏神役） =====
-const BINBO_NAME='ビンボット';
+// ===== グラ廃神（貧乏神役） =====
+const BINBO_NAME='グラ廃神';
 function binboAttach(target,why){ if(!target) return; state.binbo={pid:target.id,moved:false,acted:-1};
   cutin('binbo/front',target,`${BINBO_NAME}が<br>取りついた！`,0,false); addChat('👾','#888',`${BINBO_NAME}が ${target.name} に取りついた${why?'（'+why+'）':''}`); }
 function binboAct(p){
@@ -1844,7 +1844,7 @@ function frame(now){
   drawBinbo(t);
   drawChoiceArrows(t);
 }
-// ビンボットの描画（取りついた人の電車のそばを歩く）
+// グラ廃神の描画（取りついた人の電車のそばを歩く）
 const BIN_IMG={}; ['front','walk1','walk2','walk3','walk4','walk5','walk6','walk7','walk8'].forEach(k=>{ const im=new Image(); im.src='binbo/'+k+'.webp'; BIN_IMG[k]=im; });
 let binDisp=null;
 function drawBinbo(t){
