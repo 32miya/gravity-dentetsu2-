@@ -212,6 +212,7 @@ button{font-family:inherit;cursor:pointer;border:0}
 #chatForm input{flex:1;border:0;padding:10px;font-size:16px;font-family:inherit;min-width:0}
 #chatForm button{background:#1a7ef0;color:#fff;padding:0 16px;font-size:16px}
 #chat.min #chatBody,#chat.min #chatForm{display:none}
+.sndt{background:#fff;border:2px solid #cba;border-radius:999px;padding:4px 12px;font-size:13px;margin:4px 0;color:#555}
 .screen .hero{display:block;width:calc(100% + 28px);margin:-14px -14px 8px;height:150px;object-fit:cover;border-radius:16px 16px 0 0}
 .screen{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:16px;background:linear-gradient(#5ab3e8,#2a6fb0)}
 .screen .card{max-width:420px;text-align:center;max-height:92vh}
@@ -246,6 +247,7 @@ button{font-family:inherit;cursor:pointer;border:0}
     <button id="followBtn" title="現在地へ">📍</button>
     <button id="mapBtn" title="全体地図">🗾</button>
     <button id="listBtn" title="一覧の開閉">👥</button>
+    <button id="sndBtn" title="音のオン・オフ">🔊</button>
     <button id="exitBtn" title="退出">🚪</button>
   </div>
   <div id="cardBar" class="hidden"></div>
@@ -279,6 +281,7 @@ button{font-family:inherit;cursor:pointer;border:0}
     </div>
     <div id="err"></div>
     <div id="resumeBox"></div>
+    <button id="sndBtn2" class="sndt" type="button">🔊 効果音：オン</button>
     <div id="qinfo">📚 問題を読み込み中…</div>
     <div id="repInfo" class="hidden"><span></span> <button id="repExp">書き出す</button> <button id="repClr">消去</button></div>
     <label class="filebtn">＋ 問題ファイル(JSON)を追加で読み込む<input type="file" id="qfile" accept=".json,application/json" multiple hidden></label>
@@ -1164,7 +1167,7 @@ function renderLobby(){
 }
 
 // ===================== ゲームHUD描画 =====================
-let cardPick=null, lastHostNote=null;
+let cardPick=null, lastHostNote=null, lastQuizSnd=null, lastPosSig=null, lastChatSnd=null;
 let lastDiceSeq=0, lastToastSeq=0, lastSettleSeq=0, lastCur=-1, lastPhase='', listMini=false;
 function render(){
   if(!state) return;
@@ -1212,6 +1215,9 @@ function render(){
   if(state.fx && state.fx.seq!==lastFxSeq){ lastFxSeq=state.fx.seq; fxAt=Date.now(); }
   if(lastHostNote===null) lastHostNote=state.hostNote?state.hostNote.seq:0;
   if(state.hostNote && state.hostNote.seq!==lastHostNote){ lastHostNote=state.hostNote.seq; { const el=$('hostNote'); el.textContent=state.hostNote.t; el.classList.remove('hidden'); void el.offsetWidth; clearTimeout(el._tm); el._tm=setTimeout(()=>el.classList.add('hidden'),4500); } }
+  if(state.quiz && state.quiz.id!==lastQuizSnd && state.phase==='quiz'){ lastQuizSnd=state.quiz.id; SFX.play('quiz'); }
+  { const sig=state.players.map(p=>p.pos).join(','); if(lastPosSig!==null && sig!==lastPosSig && (state.phase==='moving'||state.phase==='choice')) SFX.play('step'); lastPosSig=sig; }
+  { const L=state.chat[state.chat.length-1]; const k=(state.chatN||0); if(lastChatSnd!==null && k!==lastChatSnd && L && L.u) SFX.play('pop'); lastChatSnd=k; }
   feedCutins(state.cutin);
   if(state.toast && state.toast.seq!==lastToastSeq){ lastToastSeq=state.toast.seq; { const amP=!!P(myId); const vis=(state.toast.items||[]).map(it=>it.t); if(vis.length) showToast(vis.join('<br>')); } }
   if(state.phase==='end'){ $('toast').classList.remove('show'); setTimeout(showResult,cutBusy?1800:300); }
@@ -1220,7 +1226,44 @@ function render(){
 }
 const dcv=$('diceCv'), dctx=dcv.getContext('2d'); let diceAnim=null, diceLoopOn=false;
 const PIPS={1:[[0,0]],2:[[-1,-1],[1,1]],3:[[-1,-1],[0,0],[1,1]],4:[[-1,-1],[1,-1],[-1,1],[1,1]],5:[[-1,-1],[1,-1],[0,0],[-1,1],[1,1]],6:[[-1,-1],[1,-1],[-1,0],[1,0],[-1,1],[1,1]]};
+// ===================== 効果音（Web Audioで合成） =====================
+const SFX=(()=>{ let ac=null, on=true; try{ on=localStorage.getItem('gdt2_snd')!=='0'; }catch(e){}
+  const ctx=()=>{ if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } } if(ac.state==='suspended') ac.resume(); return ac; };
+  const tone=(f,dur,type='square',vol=.12,t0=0,slide=0)=>{ const a=ctx(); if(!a) return; const t=a.currentTime+t0, o=a.createOscillator(), g=a.createGain();
+    o.type=type; o.frequency.setValueAtTime(f,t); if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(30,f*slide),t+dur);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.008); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t+dur+0.03); };
+  let nbuf=null; const noise=(dur,vol=.2,t0=0,freq=1800,q=1)=>{ const a=ctx(); if(!a) return; if(!nbuf){ nbuf=a.createBuffer(1,a.sampleRate*0.5,a.sampleRate); const d=nbuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; }
+    const t=a.currentTime+t0, src=a.createBufferSource(), f=a.createBiquadFilter(), g=a.createGain(); src.buffer=nbuf; f.type='bandpass'; f.frequency.value=freq; f.Q.value=q;
+    g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); src.connect(f).connect(g).connect(a.destination); src.start(t); src.stop(t+dur+0.02); };
+  const arp=(fs,step,dur,type,vol)=>fs.forEach((f,i)=>tone(f,dur,type,vol,i*step));
+  const S={
+    click:()=>tone(1100,.04,'square',.05),
+    dice:()=>{ for(let i=0;i<11;i++) noise(.035,.18,i*.1+Math.random()*.03,2500+Math.random()*1500,3); },
+    land:()=>{ noise(.09,.35,0,900,1.5); tone(150,.14,'sine',.3); },
+    step:()=>{ noise(.045,.09,0,1300,2); noise(.04,.06,.07,1100,2); },
+    quiz:()=>arp([659,784,1047],.07,.16,'triangle',.12),
+    tick:()=>tone(1500,.025,'square',.04),
+    ok:()=>{ tone(988,.13,'square',.11); tone(1319,.32,'square',.11,.12); },
+    ng:()=>{ tone(196,.5,'sawtooth',.11); tone(185,.5,'sawtooth',.08,.02); },
+    coin:()=>{ tone(988,.07,'square',.08); tone(1319,.22,'square',.08,.07); },
+    lose:()=>tone(620,.35,'triangle',.11,0,.45),
+    good:()=>arp([523,659,784,1047],.08,.18,'square',.08),
+    bad:()=>arp([392,330,262,196],.11,.22,'sawtooth',.07),
+    fanfare:()=>{ arp([523,523,523,698,880,784,880,1047],.11,.2,'square',.08); arp([262,262,262,349,440,392,440,523],.11,.2,'triangle',.07); },
+    turn:()=>{ tone(1175,.16,'sine',.1); tone(1568,.28,'sine',.1,.14); },
+    stop:()=>{ tone(1568,.1,'square',.08); tone(2093,.35,'square',.08,.09); },
+    binbo:()=>{ tone(233,.7,'sawtooth',.07,0,.55); tone(247,.7,'sawtooth',.06,.06,.5); noise(.5,.06,0,400,1); },
+    pop:()=>tone(1400,.07,'sine',.07,0,1.4),
+    card:()=>{ noise(.12,.12,0,4000,1); tone(1760,.12,'triangle',.07,.05); }
+  };
+  const unlock=()=>{ if(on) ctx(); };
+  addEventListener('pointerdown',unlock,{capture:true});
+  return { play:(k)=>{ if(on&&S[k]) try{ S[k](); }catch(e){} }, get on(){ return on; }, set:(v)=>{ on=!!v; try{ localStorage.setItem('gdt2_snd',on?'1':'0'); }catch(e){} if(on) ctx(); } };
+})();
+document.addEventListener('click',e=>{ if(e.target.closest('button')) SFX.play('click'); },true);
 function showDice(d){
+  SFX.play('dice'); setTimeout(()=>SFX.play('land'),1250);
   const vals=d.filter(x=>x>0);
   diceAnim={vals,ex:vals.length>1,t0:performance.now(),dirs:vals.map((_,i)=>i%2?1:-1),spin:vals.map(()=>({ax:(3+Math.random()*2)*Math.PI*(Math.random()<.5?-1:1),ay:(3+Math.random()*2)*Math.PI*(Math.random()<.5?-1:1),az:(Math.random()-.5)*Math.PI}))};
   if(!diceLoopOn){ diceLoopOn=true; requestAnimationFrame(diceLoop); }
@@ -1318,8 +1361,8 @@ function diceLoop(now){
 let lastRoulSeq=0, roulTm=null;
 function showRoulette(R){ const el=$('roul'), nm=$('roulName'), sub=$('roulSub'); el.classList.remove('hidden','done'); sub.textContent='';
   let k=0, delay=60; const t0=Date.now(); clearTimeout(roulTm);
-  const spin=()=>{ const el2=Date.now()-t0; if(el2<3000){ nm.textContent=R.names[k++%R.names.length]; delay=60+Math.pow(el2/3000,3)*380; roulTm=setTimeout(spin,delay); }
-    else { nm.textContent=R.pick; el.classList.add('done'); sub.textContent='に決定！'; roulTm=setTimeout(()=>el.classList.add('hidden'),2000); } };
+  const spin=()=>{ const el2=Date.now()-t0; if(el2<3000){ nm.textContent=R.names[k++%R.names.length]; SFX.play('tick'); delay=60+Math.pow(el2/3000,3)*380; roulTm=setTimeout(spin,delay); }
+    else { nm.textContent=R.pick; el.classList.add('done'); sub.textContent='に決定！'; SFX.play('stop'); roulTm=setTimeout(()=>el.classList.add('hidden'),2000); } };
   spin(); }
 let toastTm=null;
 const CUT_IMG={}; ['arrive','mono','steal','settle','typhoon','express','fest',...[0,1,2,3,4,5,6,7].flatMap(i=>['b'+i,'r'+i])].forEach(k=>{ const im=new Image(); im.src='cuts/'+k+'.webp'; CUT_IMG[k]=im; });
@@ -1330,7 +1373,9 @@ BAND_OF.forEach(k=>{ const a=new Image(); a.src='ui/band_'+k+'.webp'; const b=ne
 let lastCutId=null, cutQ=[], cutBusy=false, toastHold=null;
 function feedCutins(c){ if(lastCutId===null){ lastCutId=c?c.n:0; return; } if(!c) return; c.items.filter(it=>it.id>lastCutId).forEach(it=>{ const L=cutQ[cutQ.length-1]; if(L&&L.img==='ui/buy'&&it.img==='ui/buy'&&L.who===it.who){ L.n=(L.n||1)+1; L.amt+=it.amt; L.ttl=`物件を${L.n}件<br>購入！`; } else cutQ.push({...it}); }); lastCutId=c.n; if(!cutBusy) playCut(); }
 const SMALL_CUT=new Set(['ui/ok','ui/ng','ui/buy','ui/toll','ui/stealfail','express','typhoon','fest']);
-function playMini(it){ const el=$('minicut'); const a=it.amt? (it.amt>0?'+':'−')+yenS(Math.abs(it.amt)) : '';
+const CUT_SND={'ui/ok':'ok','ui/ng':'ng','ui/buy':'coin','ui/toll':'lose','ui/stealfail':'ng',express:'card',typhoon:'bad',fest:'coin',arrive:'fanfare',mono:'fanfare',steal:'good',settle:'coin','ui/startband':'fanfare','ui/lastmonth':'turn','binbo/front':'binbo'};
+function cutSound(it){ const k=CUT_SND[it.img]||(/^b\d/.test(it.img)?'good':/^r\d/.test(it.img)?'bad':(it.good?'good':'bad')); SFX.play(k); }
+function playMini(it){ cutSound(it); const el=$('minicut'); const a=it.amt? (it.amt>0?'+':'−')+yenS(Math.abs(it.amt)) : '';
   el.innerHTML=`<img src="${it.img.includes('/')?it.img:'cuts/'+it.img}.webp" alt=""><div class="mt">${it.who?`<span class="mw" style="background:${it.col}">${esc(it.who)}</span>`:''}<div class="mtt">${it.ttl.replace(/<br>/g,' ')}</div></div>${a?`<div class="ma ${it.amt>0?'p':'m'}">${a}</div>`:''}`;
   el.className=it.good?'good':'bad'; void el.offsetWidth; el.classList.add('on');
   setTimeout(()=>{ el.classList.add('out'); setTimeout(playCut,180); },cutQ.length>2?520:820); }
@@ -1338,19 +1383,19 @@ function playCut(){ const el=$('cutin'); const it=cutQ.shift();
   if(it && SMALL_CUT.has(it.img)){ el.className='hidden'; cutBusy=true; return playMini(it); }
   $('minicut').className='hidden';
   if(!it){ cutBusy=false; el.className='hidden'; if(toastHold){ const h=toastHold; toastHold=null; showToast(h); } return; }
-  cutBusy=true; const a=it.amt? (it.amt>0?'+':'−')+yenS(Math.abs(it.amt)) : '';
+  cutBusy=true; cutSound(it); const a=it.amt? (it.amt>0?'+':'−')+yenS(Math.abs(it.amt)) : '';
   el.innerHTML=`<div class="band"></div><div class="ccard"><img src="${it.img.includes('/')?it.img:'cuts/'+it.img}.webp" alt=""><div class="txt">${it.who?`<span class="who" style="background:${it.col}">${esc(it.who)}</span>`:''}<div class="ttl">${it.ttl}</div>${a?`<div class="amt">${a}</div>`:''}</div></div>`;
   el.className=it.good?'good':'bad'; void el.offsetWidth; el.classList.add('on');
   if(!it.good){ const g=$('game'); g.classList.remove('shake'); void g.offsetWidth; g.classList.add('shake'); }
   const dur=cutQ.length>2?1100:1600;
   setTimeout(()=>{ el.classList.add('out'); setTimeout(playCut,330); },dur);
 }
-function showTurnCut(p){ const el=$('turnCut'); const mine=p.id===myId;
+function showTurnCut(p){ SFX.play('turn'); const el=$('turnCut'); const mine=p.id===myId;
   el.innerHTML=`<div class="tb2"><img src="ui/band_${bandKey(p)}.webp" alt=""><div class="tt"><span class="tsub">${state.month}ヶ月目・目的地 ${state.goalsDone}/${state.goalN}</span><span class="tname">${mine?'あなたの番！':esc(p.name)+' の番'}</span></div></div>`;
   el.className=''; void el.offsetWidth; el.classList.add('on'); clearTimeout(el._tm); el._tm=setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.className='hidden',400); },1400); }
 let resultShown=false, resTm=[];
 function showResult(){
-  if(resultShown||!state.result) return; resultShown=true; const R=$('result'); R.className=''; $('chat').classList.add('hidden'); $('modal').classList.add('hidden');
+  if(resultShown||!state.result) return; SFX.play('fanfare'); resultShown=true; const R=$('result'); R.className=''; $('chat').classList.add('hidden'); $('modal').classList.add('hidden');
   const rows=state.result, n=rows.length; resTm.forEach(clearTimeout); resTm=[];
   const later=(ms,f)=>resTm.push(setTimeout(f,ms));
   const rkImg=i=>i===0?'rank1':i===1?'rank2':i===2&&n>3?'rank3':i===n-1?'ranklast':(i===2?'rank3':null);
@@ -1366,7 +1411,7 @@ function showResult(){
   R.innerHTML=`<div class="stage"><div class="endwrap"><img class="endimg" src="ui/endband.webp"><div class="endtxt">ゲーム終了！</div></div><div class="rknm" style="background:#2b2420;margin-top:14px">おつかれさまでした</div></div><div class="skip">タップでスキップ ▶</div>`;
   let t=2600;
   for(let i=n-1;i>=0;i--){ const r=rows[i], im=rkImg(i);
-    later(t,()=>{ R.innerHTML=`<div class="stage">${im?`<img class="rkimg" src="ui/${im}.webp">`:''}<div class="rkno">第${i+1}位</div><div class="rknm" style="background:${r.c}">${esc(r.n)}</div><div class="rkas">${yen(r.a)}</div></div><div class="skip">タップでスキップ ▶</div>`; if(i===0) conf(); });
+    later(t,()=>{ SFX.play(i===0?'fanfare':'land'); R.innerHTML=`<div class="stage">${im?`<img class="rkimg" src="ui/${im}.webp">`:''}<div class="rkno">第${i+1}位</div><div class="rknm" style="background:${r.c}">${esc(r.n)}</div><div class="rkas">${yen(r.a)}</div></div><div class="skip">タップでスキップ ▶</div>`; if(i===0) conf(); });
     t+= i===0?3200:1800; }
   later(t,final);
 }
@@ -1493,6 +1538,8 @@ $('chatForm').onsubmit=e=>{ e.preventDefault(); const v=$('chatIn').value; $('ch
 $('followBtn').onclick=()=>{ follow=true; cam.tz=1.4; };
 $('mapBtn').onclick=()=>{ follow=false; const s=Math.min(innerWidth/WW,innerHeight/WH)*0.95; cam.tz=s; cam.tx=WW/2; cam.ty=WH/2; };
 $('exitBtn').onclick=leaveGame;
+function syncSnd(){ $('sndBtn').textContent=SFX.on?'🔊':'🔇'; $('sndBtn2').textContent=SFX.on?'🔊 効果音：オン':'🔇 効果音：オフ'; }
+$('sndBtn').onclick=$('sndBtn2').onclick=()=>{ SFX.set(!SFX.on); syncSnd(); if(SFX.on) SFX.play('coin'); }; syncSnd();
 $('roomTag').onclick=async()=>{ const link=location.origin+location.pathname+'?room='+roomCode; try{ if(navigator.share) await navigator.share({title:'ぐらびてぃ電鉄2',text:`ルームコード ${roomCode} で参加してね！`,url:link}); else { await navigator.clipboard.writeText(link); toastLocal('招待リンクをコピーしました'); } }catch(e){} };
 function toastLocal(t){ showToast(t); }
 $('repExp').onclick=exportReps; $('repClr').onclick=()=>{ if(confirm('報告した問題の記録を消去しますか？')){ try{localStorage.removeItem('gdt2_reports')}catch(e){} updateRepInfo(); } }; updateRepInfo();
