@@ -79,6 +79,13 @@ button{font-family:inherit;cursor:pointer;border:0}
 #cutin.bad.on .ccard{animation:cshake .35s .35s 2}
 @keyframes cshake{0%,100%{translate:0 0}25%{translate:-8px 3px}50%{translate:7px -3px}75%{translate:-5px 2px}}
 #game.shake{animation:cshake .3s 2}
+#turnCut{position:fixed;inset:0;z-index:28;pointer-events:none;display:flex;align-items:center;overflow:hidden}
+#turnCut .tband{width:100%;height:110px;background:linear-gradient(90deg,transparent,var(--pc) 12%,var(--pc) 88%,transparent);display:flex;align-items:center;justify-content:center;transform:scaleY(0);transition:transform .25s;box-shadow:0 0 0 4px rgba(255,255,255,.85)}
+#turnCut .tin{display:flex;flex-direction:column;align-items:center;transform:translateX(100vw);transition:transform .35s cubic-bezier(.2,1.3,.4,1)}
+#turnCut.on .tband{transform:scaleY(1)} #turnCut.on .tin{transform:translateX(0)}
+#turnCut.out .tin{transform:translateX(-100vw);transition:transform .3s ease-in} #turnCut.out .tband{transform:scaleY(0);transition-delay:.15s}
+#turnCut .tsub{color:#fff;font-size:14px;font-weight:bold;text-shadow:0 2px 0 rgba(0,0,0,.4)}
+#turnCut .tname{color:#fff;font-size:34px;font-weight:bold;text-shadow:3px 3px 0 #2b2420,-2px -2px 0 #2b2420,2px -2px 0 #2b2420,-2px 2px 0 #2b2420}
 #toast{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%) scale(.6);background:#fff;border:3px solid var(--or);border-radius:16px;padding:12px 18px;font-size:18px;text-align:center;z-index:25;opacity:0;transition:.25s;pointer-events:none;max-width:88vw;box-shadow:0 6px 18px rgba(0,0,0,.3)}
 #toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
 #modal{position:fixed;inset:0;display:flex;align-items:flex-end;justify-content:center;z-index:15;pointer-events:none;padding:0 10px calc(66px + env(safe-area-inset-bottom))}
@@ -163,6 +170,7 @@ button{font-family:inherit;cursor:pointer;border:0}
 <canvas id="diceCv"></canvas><div id="roul" class="hidden"><div class="rc"><div class="rt">🎯 目的地ルーレット</div><div class="rn" id="roulName">…</div><div class="rs" id="roulSub"></div></div></div>
 <div id="toast"></div>
 <div id="cutin" class="hidden"></div>
+<div id="turnCut" class="hidden"></div>
 <div id="modal" class="hidden"><div class="card" id="mcard"></div></div>
 
 <div id="title" class="screen">
@@ -177,7 +185,7 @@ button{font-family:inherit;cursor:pointer;border:0}
     <div id="err"></div>
     <div id="qinfo">📚 問題を読み込み中…</div>
     <label class="filebtn">＋ 問題ファイル(JSON)を追加で読み込む<input type="file" id="qfile" accept=".json,application/json" multiple hidden></label>
-    <div class="howto">🚂 札幌から鹿児島中央をめざす旅すごろく<br>🎲 手番の人がサイコロ → 全員でご当地クイズ<br>🎯 出目でジャンルと難易度が決まる<br>　1🍜グルメ・名所 2💋恋愛・大人の雑学 3🎎祭り・名産<br>　4📺昭和平成 5📜歴史・オカルト 6🧭地理・雑学<br>⭕ 正解者は出目の数だけ進む／❌ 不正解者は出目の数だけ戻る<br>🏢 手番の人が正解したら、止まった駅の物件を買える<br>👑 駅の物件を全部買うと「独占」で収益・通行料2倍<br>💥 他人の独占駅に正解して止まったら、サイコロで奇数を出せば1件買い取れる<br>💰 1手番＝1ヶ月、3ヶ月ごとに決算。最後は総資産で勝負！</div>
+    <div class="howto">🚂 ルーレットで決まる目的地をめざす日本一周すごろく<br>🎲 手番の人がサイコロを振ってご当地クイズに挑戦<br>🎯 出目でジャンルと難易度が決まる<br>　1🍜グルメ・名所 2💋恋愛・大人の雑学 3🎎祭り・名産<br>　4📺昭和平成 5📜歴史・オカルト 6🧭地理・雑学<br>⭕ 正解なら出目の数だけ進む／❌ 不正解ならその場にとどまる<br>🏢 手番の人が正解したら、止まった駅の物件を買える<br>👑 駅の物件を全部買うと「独占」で収益・通行料2倍<br>💥 他人の独占駅に正解して止まったら、サイコロで奇数を出せば1件買い取れる<br>💰 1手番＝1ヶ月、3ヶ月ごとに決算。最後は総資産で勝負！</div>
   </div>
 </div>
 
@@ -525,7 +533,7 @@ function act(pid,a,v){
     const who=p||state.spect.find(s=>s.id===pid); addChat(who?who.name:'観戦者', p?p.color:'#888', t); commit(); return; }
   if(!p) return;
   if(a==='answer'){ const q=state.quiz;
-    if(state.phase==='quiz' && q && !p.finished && !q.answers[pid] && v>=0 && v<4 && !(q.hint.includes(pid)&&q.removed.includes(v))) doAnswer(p,v);
+    if(state.phase==='quiz' && q && p===curP() && !p.finished && !q.answers[pid] && v>=0 && v<4 && !(q.hint.includes(pid)&&q.removed.includes(v))) doAnswer(p,v);
     return; }
   if(a==='choose'){ if(state.phase==='choice' && state.chooser===pid){ const o=state.chooseOpts[Math.max(0,Math.min(state.chooseOpts.length-1,v|0))]; state.moves[pid].next=o.to; state.chooser=null; state.chooseOpts=null; state.phase='moving'; commit(); setTimeout(moveTick,350); } return; }
   if(state.players[state.cur]?.id!==pid) return;
@@ -589,27 +597,27 @@ function startQuiz(){
   const removed=shuffle([0,1,2,3].filter(i=>i!==ans)).slice(0,2);
   state.quizSeq=(state.quizSeq||0)+1;
   state.quiz={id:state.quizSeq,q:src[0],choices,ans,st:st.n,d,lv,limit:QUIZ_SEC,answers:{},order:0,
-    hint:active().filter(x=>x.lucky).map(x=>x.id),removed,revealed:false};
-  state.phase='quiz'; state.msg=`【${st.n}の${GENRES[lv].i}${GENRES[lv].n}】全員回答！⭕+${d}マス／❌−${d}マス`;
+    hint:p.lucky?[p.id]:[],removed,revealed:false};
+  state.phase='quiz'; state.msg=`【${st.n}の${GENRES[lv].i}${GENRES[lv].n}】${p.name} が挑戦！`;
   commit();
   clearTimeout(quizTimer); quizTimer=setTimeout(revealQuiz,QUIZ_SEC*1000+500);
 }
 function doAnswer(p,v){
   const q=state.quiz; q.answers[p.id]={c:v,o:++q.order};
   commit();
-  if(active().every(x=>q.answers[x.id])){ clearTimeout(quizTimer); quizTimer=setTimeout(revealQuiz,700); }
+  if(p===curP()){ clearTimeout(quizTimer); quizTimer=setTimeout(revealQuiz,700); }
 }
 function revealQuiz(){
   const q=state.quiz; if(!q||q.revealed||state.phase!=='quiz') return; q.revealed=true;
   const d=q.d, okN=[]; state.moves={};
-  active().forEach(p=>{ const a=q.answers[p.id]; const ok=!!a&&a.c===q.ans; p.lucky=!ok;
+  const p=curP(); { const a=q.answers[p.id]; const ok=!!a&&a.c===q.ans; p.lucky=!ok;
     if(p.rest>0){ p.rest--; state.moves[p.id]={dir:0,left:0,ok,rest:true}; }
-    else state.moves[p.id]={dir:ok?1:-1,left:d,ok};
-    if(ok) okN.push(p.name); });
+    else state.moves[p.id]={dir:ok?1:0,left:ok?d:0,ok};
+    if(ok) okN.push(p.name); }
   state.phase='reveal';
-  state.fx={seq:(state.fx?.seq||0)+1,ok:active().filter(p=>state.moves[p.id].ok).map(p=>p.id),ng:active().filter(p=>!state.moves[p.id].ok).map(p=>p.id)};
-  state.msg=`正解は「${q.choices[q.ans]}」！ `+(okN.length?`⭕ ${okN.join('・')} が前進`:'全員不正解…');
-  addChat('❓','#888',`正解「${q.choices[q.ans]}」 ⭕${okN.length}人・❌${active().length-okN.length}人`);
+  state.fx={seq:(state.fx?.seq||0)+1,ok:okN.length?[p.id]:[],ng:okN.length?[]:[p.id]};
+  state.msg=`正解は「${q.choices[q.ans]}」！ `+(okN.length?`⭕ ${p.name} は${d}マス進む`:`❌ ${p.name} はその場にとどまる`);
+  addChat('❓','#888',`${p.name}：正解「${q.choices[q.ans]}」 ${okN.length?'⭕':'❌'}`);
   commit();
   setTimeout(()=>{ state.phase='moving'; commit(); setTimeout(moveTick,300); },2600);
 }
@@ -733,7 +741,7 @@ function cpuCheck(){
   if(!state || state.phase==='lobby' || state.phase==='end') return;
   if(state.phase==='quiz' && state.quiz && cpuQuizFor!==state.quiz.id){
     const qid=cpuQuizFor=state.quiz.id;
-    active().filter(p=>p.cpu).forEach(p=>{
+    active().filter(p=>p.cpu && p===curP()).forEach(p=>{
       setTimeout(()=>{ const q=state.quiz; if(state.phase!=='quiz'||!q||q.id!==qid) return;
         const hint=q.hint.includes(p.id); let v=q.ans;
         if(Math.random()>(hint?0.85:0.6)){ const wrong=[0,1,2,3].filter(x=>x!==q.ans&&!(hint&&q.removed.includes(x))); v=wrong[Math.floor(Math.random()*wrong.length)]; }
@@ -743,7 +751,7 @@ function cpuCheck(){
   const p=curP(); if(!p || !p.cpu) return;
   const seq=state.seq;
   const later=(ms,fn)=>{ cpuTimer=setTimeout(()=>{ if(state.seq===seq) fn(); },ms); };
-  if(state.phase==='roll') later(1000,()=>act(p.id,'roll'));
+  if(state.phase==='roll') later(2000,()=>act(p.id,'roll'));
   else if(state.phase==='buy') later(1100,()=>{
     const s=p.pos; const cands=pidx(s).filter(k=>!ownerOf(s,k)).sort((a,b)=>ST[s].props[a].price-ST[s].props[b].price);
     const k=cands.find(k=>p.money-ST[s].props[k].price>=2000);
@@ -861,6 +869,7 @@ function render(){
   $('actBtn').classList.toggle('hidden', !(myTurn && state.phase==='roll'));
   $('actBtn').textContent = me&&me.express ? 'サイコロを振る（2個）' : 'サイコロを振る';
   // ターン切替で追従
+  if(state.cur!==lastCur && state.phase==='roll' && lastCur!==-1){ const np=curP(); if(np) showTurnCut(np); }
   if(state.cur!==lastCur || (state.phase==='moving'&&lastPhase!=='moving')){ follow=true; }
   if(state.phase==='roll'&&lastPhase!=='roll'&&follow) cam.tz=1.4;
   lastCur=state.cur; lastPhase=state.phase;
@@ -965,6 +974,9 @@ function playCut(){ const el=$('cutin'); const it=cutQ.shift();
   const dur=cutQ.length>2?1100:1700;
   setTimeout(()=>{ el.classList.add('out'); setTimeout(playCut,330); },dur);
 }
+function showTurnCut(p){ const el=$('turnCut'); const mine=p.id===myId;
+  el.innerHTML=`<div class="tband" style="--pc:${p.color}"><div class="tin"><span class="tsub">${state.month}/${state.maxMonth}ヶ月目</span><span class="tname">${mine?'🚃 あなたの番！':'🚃 '+esc(p.name)+' の番'}</span></div></div>`;
+  el.className=''; void el.offsetWidth; el.classList.add('on'); clearTimeout(el._tm); el._tm=setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.className='hidden',400); },1400); }
 function showToast(html){ if(cutBusy){ toastHold=html; return; } const t=$('toast'); t.innerHTML=html; t.classList.add('show'); clearTimeout(toastTm); toastTm=setTimeout(()=>t.classList.remove('show'),2300); }
 
 function renderModal(myTurn){
@@ -976,7 +988,7 @@ function renderModal(myTurn){
 
   } else if((state.phase==='quiz'||state.phase==='reveal') && state.quiz){
     const q=state.quiz, meP=P(myId), rev=state.phase==='reveal';
-    const canAns=meP && !meP.finished && state.phase==='quiz', my=q.answers[myId], hint=q.hint.includes(myId);
+    const cp=curP(); const canAns=meP && meP===cp && !meP.finished && state.phase==='quiz', my=q.answers[myId], hint=q.hint.includes(cp.id);
     html=`<h2><span class="lv">🎲${q.lv}　Lv.${q.lv} ${'★'.repeat(q.lv)}${'☆'.repeat(6-q.lv)}</span>【${esc(q.st)}の${GENRES[q.lv].i}${GENRES[q.lv].n}】</h2>
     ${rev?'':`<div class="tbar"><div id="qfill"></div><span id="qtimer">${q.limit}</span></div>`}
     <div class="q">${esc(q.q)}</div>
@@ -984,10 +996,10 @@ function renderModal(myTurn){
     <div class="choices">${q.choices.map((c,i)=>{ const cut=hint&&q.removed.includes(i);
       const cls = rev ? (i===q.ans?'ok':(my&&my.c===i?'ng':(cut?'cut':''))) : ((my&&my.c===i)?'sel':(cut?'cut':''));
       return `<button data-ans="${i}" ${(!canAns||my||cut)?'disabled':''} class="${cls}">${esc(c)}</button>`; }).join('')}</div>
-    <div class="chips">${active().map(p=>{ const a=q.answers[p.id];
+    <div class="chips">${[cp].map(p=>{ const a=q.answers[p.id];
       const mark = rev ? (a&&a.c===q.ans?'⭕':'❌') : (a?'✔':'…');
       return `<span class="chip" style="background:${p.color}">${mark} ${esc(p.name)}</span>`; }).join('')}</div>
-    ${my&&!rev?'<div class="sub">回答済み！ほかの人を待っています</div>':''}${!meP&&!rev?'<div class="sub">観戦中</div>':''}`;
+    ${!canAns&&!my&&!rev?`<div class="sub">👀 ${esc(cp.name)} が回答中…</div>`:''}`;
   } else if(state.phase==='buy'){
     const s=p.pos, st=ST[s], mine=myTurn;
     html=`<h2>🏢 ${st.n} の物件</h2><div class="sub">所持金 ${yen(p.money)}／収益は${SETTLE_EVERY}ヶ月ごとの決算で入る</div>`+
@@ -1257,7 +1269,7 @@ function frame(now){
   if(state && state.players.length && follow){
     const myChoice=state.phase==='choice'&&state.chooser===myId&&P(myId)&&disp[myId];
     if(myChoice){ const d=disp[myId]; cam.tx=d.x; cam.ty=d.y; cam.tz=Math.max(1.1,Math.min(1.6,cam.tz)); }
-    const group=!myChoice&&['quiz','reveal','moving','choice','after'].includes(state.phase);
+    const group=false;
     const ps=group?state.players.filter(p=>!p.finished&&disp[p.id]):[];
     if(ps.length>1){ let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; ps.forEach(p=>{const d=disp[p.id]; x0=Math.min(x0,d.x);x1=Math.max(x1,d.x);y0=Math.min(y0,d.y);y1=Math.max(y1,d.y);});
       cam.tx=(x0+x1)/2; cam.ty=(y0+y1)/2+60; cam.tz=Math.max(0.3,Math.min(1.4,Math.min(innerWidth/(x1-x0+220),innerHeight*0.45/(y1-y0+160)))); }
