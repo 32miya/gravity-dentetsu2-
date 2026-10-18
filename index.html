@@ -1144,7 +1144,8 @@ const DFACES=[ {n:[0,0,1],u:[1,0,0],v:[0,1,0],val:1}, {n:[0,0,-1],u:[-1,0,0],v:[
 // 各目を手前（+Z）に向ける回転を探す
 const DBASE={}; (()=>{ const qs=[0,1,2,3].map(k=>k*Math.PI/2);
   for(const f of DFACES){ outer: for(const a of qs) for(const b of qs){ const R=M3.mul(M3.rx(a),M3.ry(b)); const n=M3.ap(R,f.n); if(n[2]>0.99){ DBASE[f.val]=R; break outer; } } } })();
-const DTILT=M3.mul(M3.rx(-0.42),M3.ry(0.52));
+// 出目の面を「上面」にし、斜め上から見下ろす角度で止める（上面がよく見えるよう約43°傾ける）
+const DTILT=M3.mul(M3.ry(0.5),M3.rx(0.75));
 function drawDie3D(c,x,y,S,R,ex){
   const h=S*0.5, L=[-0.35,-0.55,0.76];
   const proj=v=>{ const z=v[2]; const k=1/(1-z*0.12); return [x+v[0]*h*k, y+v[1]*h*k, z]; };
