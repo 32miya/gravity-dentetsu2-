@@ -142,7 +142,7 @@ button{font-family:inherit;cursor:pointer;border:0}
     <div id="err"></div>
     <div id="qinfo">📚 問題を読み込み中…</div>
     <label class="filebtn">＋ 問題ファイル(JSON)を追加で読み込む<input type="file" id="qfile" accept=".json,application/json" multiple hidden></label>
-    <div class="howto">🚂 札幌から鹿児島中央をめざす旅すごろく<br>🎲 手番の人がサイコロ → 全員でご当地クイズ<br>🎯 出目でジャンルと難易度が決まる<br>　1🍜グルメ・名所 2💋恋愛・大人の雑学 3🎎祭り・名産<br>　4📺昭和平成 5📜歴史・オカルト 6🧭地理・雑学<br>⭕ 正解者は出目の数だけ進む／❌ 不正解者は出目の数だけ戻る<br>🏢 手番の人が正解したら、止まった駅の物件を買える<br>👑 駅の物件を全部買うと「独占」で収益・通行料2倍<br>💰 1手番＝1ヶ月、3ヶ月ごとに決算。最後は総資産で勝負！</div>
+    <div class="howto">🚂 札幌から鹿児島中央をめざす旅すごろく<br>🎲 手番の人がサイコロ → 全員でご当地クイズ<br>🎯 出目でジャンルと難易度が決まる<br>　1🍜グルメ・名所 2💋恋愛・大人の雑学 3🎎祭り・名産<br>　4📺昭和平成 5📜歴史・オカルト 6🧭地理・雑学<br>⭕ 正解者は出目の数だけ進む／❌ 不正解者は出目の数だけ戻る<br>🏢 手番の人が正解したら、止まった駅の物件を買える<br>👑 駅の物件を全部買うと「独占」で収益・通行料2倍<br>💥 他人の独占駅に正解して止まったら、サイコロで奇数を出せば1件買い取れる<br>💰 1手番＝1ヶ月、3ヶ月ごとに決算。最後は総資産で勝負！</div>
   </div>
 </div>
 
@@ -494,6 +494,29 @@ function act(pid,a,v){
   if(a==='roll' && state.phase==='roll') doRoll(p);
   else if(a==='buy' && state.phase==='buy') doBuy(p,v);
   else if(a==='endbuy' && state.phase==='buy') endTurn();
+  else if(a==='steal' && state.phase==='steal') doStealRoll(p);
+  else if(a==='stealbuy' && state.phase==='stealbuy') doStealBuy(p,v);
+  else if(a==='endbuy' && (state.phase==='steal'||state.phase==='stealbuy')) endTurn();
+}
+function stealMin(s){ return Math.min(...ST[s].props.map(x=>x.price)); }
+function doStealRoll(p){
+  const s=p.pos; if(p.money<stealMin(s)) return;
+  const d=r6(); state.dice=[d,0]; state.diceSeq++; state.phase='stealroll';
+  const ok=d%2===1, owner=P(monopolist(s));
+  state.msg=`🎲 独占崩しチャレンジ！出目は ${d}`; commit();
+  setTimeout(()=>{
+    if(ok){ state.phase='stealbuy'; state.msg=`⭕ 奇数！${p.name} は ${ST[s].n} の物件を1件だけ買い取れます`;
+      toast(`🎲 ${d}（奇数）成功！<br>${esc(owner.name)} の独占を崩すチャンス`); commit(); }
+    else { toast(`🎲 ${d}（偶数）…独占崩し失敗`); addChat('🎲','#888',`${p.name} の独占崩し（${ST[s].n}）は失敗`); commit(); setTimeout(endTurn,1600); }
+  },2600);
+}
+function doStealBuy(p,k){
+  const s=p.pos, pr=ST[s].props[k], o=ownerOf(s,k), op=o&&P(o);
+  if(!pr || !op || o===p.id || p.money<pr.price) return;
+  p.money-=pr.price; op.money+=pr.price; state.owners[pkey(s,k)]=p.id;
+  toast(`💥 ${p.name} が ${ST[s].n} の「${esc(pr.nm)}」を買い取り！<br>${esc(op.name)} の👑独占が崩れた`);
+  addChat('💥','#888',`${p.name} が ${op.name} から ${ST[s].n}「${pr.nm}」を${yen(pr.price)}で買い取り、独占を崩した`);
+  commit(); setTimeout(endTurn,2200);
 }
 function doRoll(p){
   const d1=r6(), d2=p.express?r6():0; p.express=false;
@@ -628,7 +651,9 @@ function afterMove(){
   if(lines.length){ toast(lines.join('<br>')); lines.forEach(l=>addChat('📢','#888',strip(l))); }
   state.moves=null;
   const canBuy = rm && rm.ok && ST[r.pos].props.length>0 && [0,1,2].some(k=>!ownerOf(r.pos,k));
+  const mo = rm && rm.ok && ST[r.pos].props.length>0 ? monopolist(r.pos) : null;
   if(canBuy){ state.phase='buy'; state.msg=`⭕ 正解した ${r.name} は ${ST[r.pos].n} の物件を購入できます`; commit(); }
+  else if(mo && mo!==r.id){ state.phase='steal'; state.msg=`👑 ${ST[r.pos].n} は ${P(mo).name} の独占駅！奇数を出せば1件買い取れる`; commit(); }
   else { commit(); setTimeout(endTurn, lines.length?2200:700); }
 }
 function doBuy(p,k){
@@ -683,6 +708,12 @@ function cpuCheck(){
     const s=p.pos; const cands=[0,1,2].filter(k=>!ownerOf(s,k)).sort((a,b)=>ST[s].props[a].price-ST[s].props[b].price);
     const k=cands.find(k=>p.money-ST[s].props[k].price>=2000);
     if(k!=null) act(p.id,'buy',k); else act(p.id,'endbuy');
+  });
+  else if(state.phase==='steal') later(1200,()=>act(p.id, p.money-stealMin(p.pos)>=2000?'steal':'endbuy'));
+  else if(state.phase==='stealbuy') later(1200,()=>{
+    const s=p.pos; const c=[0,1,2].filter(k=>p.money-ST[s].props[k].price>=2000).sort((a,b)=>ST[s].props[b].price-ST[s].props[a].price);
+    const k=c.length?c[0]:[0,1,2].find(k=>p.money>=ST[s].props[k].price);
+    if(k!=null) act(p.id,'stealbuy',k); else act(p.id,'endbuy');
   });
 }
 
@@ -909,7 +940,17 @@ function renderModal(myTurn){
           : mine ? `<button class="btn" data-buy="${k}" ${p.money<pr.price?'disabled':''}>購入</button>` : `<span class="sub">空き</span>`;
         return `<div class="prop"><div class="info"><div class="pn">${esc(pr.nm)}</div><div class="pp">${yen(pr.price)}・収益${pr.rate}%</div></div>${btn}</div>`; }).join('')+
       (mine?`<div class="stack"><button class="btn gray" data-endbuy="1">購入を終える</button></div>`:`<div class="sub">${esc(p.name)} が検討中…</div>`)+
-      `<div class="sub">3つ全部そろえると👑独占（収益・通行料2倍）</div>`;
+      `<div class="sub">3つ全部そろえると👑独占（収益・通行料2倍）。ただし他の人が正解して止まり、サイコロで奇数を出すと1件買い取られます</div>`;
+  } else if(state.phase==='steal' || state.phase==='stealbuy'){
+    const s=p.pos, st=ST[s], mine=myTurn, ph=state.phase, own=P(monopolist(s)||ownerOf(s,0));
+    html=`<h2>👑 独占崩しチャレンジ</h2><div class="sub">${esc(st.n)} は <b style="color:${own?.color||'#888'}">${esc(own?.name||'')}</b> の独占駅</div>`+
+      `<div class="sub">サイコロで<b>奇数（1・3・5）</b>を出せば、物件を<b>1件だけ</b>買い取れます（代金は持ち主へ）／所持金 ${yen(p.money)}</div>`+
+      st.props.map((pr,k)=>{ const btn = ph==='stealbuy'&&mine ? `<button class="btn" data-sbuy="${k}" ${p.money<pr.price?'disabled':''}>買い取る</button>`
+          : `<span class="owner" style="background:${own?.color||'#888'}">${esc(own?.name||'')}</span>`;
+        return `<div class="prop"><div class="info"><div class="pn">${esc(pr.nm)}</div><div class="pp">${yen(pr.price)}・収益${pr.rate}%</div></div>${btn}</div>`; }).join('')+
+      (ph==='steal' ? (mine?`<div class="stack"><button class="btn" data-steal="1" ${p.money<stealMin(s)?'disabled':''}>🎲 チャレンジする</button><button class="btn gray" data-endbuy="1">やめる</button></div>`:`<div class="sub">${esc(p.name)} が検討中…</div>`)
+       : ph==='stealroll' ? `<div class="sub">🎲 サイコロを振っています…</div>`
+       : (mine?`<div class="stack"><button class="btn gray" data-endbuy="1">買い取らずに終える</button></div>`:`<div class="sub">${esc(p.name)} がどれを買い取るか検討中…</div>`));
   } else if(state.phase==='settle' && state.settle){
     center=true; const s=state.settle;
     html=`<h2>📊 ${s.month}ヶ月目 決算</h2>`+s.rows.map(r=>`<div class="rk"><span class="dot" style="width:14px;height:14px;border-radius:50%;background:${r.c};border:2px solid #222"></span>${esc(r.n)}<span class="v">+${yen(r.inc)}</span></div>`).join('');
@@ -924,6 +965,8 @@ function renderModal(myTurn){
     C.querySelectorAll('[data-ans]').forEach(b=>b.onclick=()=>sendAct('answer',+b.dataset.ans));
     C.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>sendAct('buy',+b.dataset.buy));
     C.querySelectorAll('[data-endbuy]').forEach(b=>b.onclick=()=>sendAct('endbuy'));
+    C.querySelectorAll('[data-steal]').forEach(b=>b.onclick=()=>sendAct('steal'));
+    C.querySelectorAll('[data-sbuy]').forEach(b=>b.onclick=()=>sendAct('stealbuy',+b.dataset.sbuy));
   }
 }
 let qStartId=null, qStartAt=0;
