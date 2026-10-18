@@ -56,6 +56,24 @@ button{font-family:inherit;cursor:pointer;border:0}
 #diceCv{position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:20;pointer-events:none}
 #dice .d{width:84px;height:84px;background:#fff;border:4px solid #222;border-radius:16px;font-size:52px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 0 rgba(0,0,0,.35);font-weight:bold}
 #dice .d.ex{background:#ffe27a}
+#cutin{position:fixed;inset:0;z-index:30;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#cutin .band{position:absolute;left:-10%;right:-10%;top:50%;height:min(62vw,300px);transform:translateY(-50%) skewY(-6deg) scaleY(0);transition:transform .22s ease-out;box-shadow:0 0 0 6px #fff,0 0 0 10px #2b2420,0 10px 30px rgba(0,0,0,.5)}
+#cutin.good .band{background:repeating-conic-gradient(from 0deg at 30% 50%,#ffd84a 0 10deg,#ffb020 10deg 20deg)}
+#cutin.bad .band{background:repeating-linear-gradient(135deg,#5a1f22 0 22px,#7a2a2e 22px 44px)}
+#cutin.on .band{transform:translateY(-50%) skewY(-6deg) scaleY(1)}
+#cutin .ccard{position:relative;display:flex;align-items:center;gap:12px;transform:translateX(120vw) rotate(8deg);transition:transform .35s cubic-bezier(.2,1.4,.4,1)}
+#cutin.on .ccard{transform:translateX(0) rotate(-3deg)}
+#cutin.out .ccard{transform:translateX(-120vw) rotate(-10deg);transition:transform .3s ease-in}
+#cutin.out .band{transform:translateY(-50%) skewY(-6deg) scaleY(0);transition-delay:.15s}
+#cutin img{height:min(56vw,270px);width:auto;max-width:48vw;object-fit:contain;filter:drop-shadow(0 6px 0 rgba(0,0,0,.35))}
+#cutin .txt{display:flex;flex-direction:column;align-items:flex-start;gap:4px;max-width:46vw}
+#cutin .who{font-size:15px;color:#fff;padding:2px 10px;border-radius:10px;border:2px solid #fff;font-weight:bold}
+#cutin .ttl{font-size:clamp(17px,5vw,26px);font-weight:bold;color:#fff;text-shadow:0 0 3px #2b2420,2px 2px 0 #2b2420,-2px -2px 0 #2b2420,2px -2px 0 #2b2420,-2px 2px 0 #2b2420;line-height:1.25}
+#cutin .amt{font-size:clamp(30px,10vw,52px);font-weight:bold;line-height:1;text-shadow:3px 3px 0 #2b2420,-2px -2px 0 #2b2420,2px -2px 0 #2b2420,-2px 2px 0 #2b2420,0 4px 0 #2b2420}
+#cutin.good .amt{color:#fff35a}#cutin.bad .amt{color:#ff6a6a}
+#cutin.bad.on .ccard{animation:cshake .35s .35s 2}
+@keyframes cshake{0%,100%{translate:0 0}25%{translate:-8px 3px}50%{translate:7px -3px}75%{translate:-5px 2px}}
+#game.shake{animation:cshake .3s 2}
 #toast{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%) scale(.6);background:#fff;border:3px solid var(--or);border-radius:16px;padding:12px 18px;font-size:18px;text-align:center;z-index:25;opacity:0;transition:.25s;pointer-events:none;max-width:88vw;box-shadow:0 6px 18px rgba(0,0,0,.3)}
 #toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
 #modal{position:fixed;inset:0;display:flex;align-items:flex-end;justify-content:center;z-index:15;pointer-events:none;padding:0 10px calc(66px + env(safe-area-inset-bottom))}
@@ -137,6 +155,7 @@ button{font-family:inherit;cursor:pointer;border:0}
 </div>
 <canvas id="diceCv"></canvas><div id="roul" class="hidden"><div class="rc"><div class="rt">🎯 目的地ルーレット</div><div class="rn" id="roulName">…</div><div class="rs" id="roulSub"></div></div></div>
 <div id="toast"></div>
+<div id="cutin" class="hidden"></div>
 <div id="modal" class="hidden"><div class="card" id="mcard"></div></div>
 
 <div id="title" class="screen">
@@ -461,6 +480,7 @@ function commit(){
   if(isHost){ const msg={t:'state',s:state}; conns.forEach(c=>{try{c.open&&c.send(msg);}catch(e){}}); cpuCheck(); }
 }
 function toast(text){ state.toast={seq:(state.toast?.seq||0)+1,text}; }
+function cutin(img,p,ttl,amt,good){ const c=state.cutin||{n:0,items:[]}; c.n++; c.items=[...c.items.slice(-7),{id:c.n,img,who:p?p.name:'',col:p?p.color:'#888',ttl,amt:amt||0,good:!!good}]; state.cutin=c; }
 function addChat(n,c,t){ state.chat.push({n,c,t}); if(state.chat.length>40) state.chat.shift(); }
 
 function addPlayer(id,name,cpu){
@@ -525,7 +545,7 @@ function doStealBuy(p,k){
   const s=p.pos, pr=ST[s].props[k], o=ownerOf(s,k), op=o&&P(o);
   if(!pr || !op || o===p.id || p.money<pr.price) return;
   p.money-=pr.price; op.money+=pr.price; state.owners[pkey(s,k)]=p.id;
-  toast(`💥 ${p.name} が ${ST[s].n} の「${esc(pr.nm)}」を買い取り！<br>${esc(op.name)} の👑独占が崩れた`);
+  cutin('steal',p,`${esc(op.name)}の<br>${ST[s].n}独占を崩した！`,0,true); toast(`💥 ${p.name} が ${ST[s].n} の「${esc(pr.nm)}」を買い取り！<br>${esc(op.name)} の👑独占が崩れた`);
   addChat('💥','#888',`${p.name} が ${op.name} から ${ST[s].n}「${pr.nm}」を${yen(pr.price)}で買い取り、独占を崩した`);
   commit(); setTimeout(endTurn,2200);
 }
@@ -622,7 +642,7 @@ const EV_RED=['財布を落とした','台風で物件を修理','税務調査�
 function arrive(p){
   const bonus=Math.round((1500+(state.tripLen||20)*90)/100)*100;
   p.money+=bonus; p.arrivals=(p.arrivals||0)+1; state.pendingRoulette=true;
-  toast(`🎯 ${p.name} が目的地「${ST[state.dest].n}」に一番乗り！<br>到着ボーナス ${yen(bonus)}`);
+  toast(`🎯 ${p.name} が目的地「${ST[state.dest].n}」に一番乗り！<br>到着ボーナス ${yen(bonus)}`); cutin('arrive',p,`${ST[state.dest].n}に<br>一番乗り！`,bonus,true);
   addChat('🎯','#888',`${p.name} が ${ST[state.dest].n} に到着（+${yen(bonus)}）`);
 }
 // 目的地ルーレット
@@ -649,15 +669,16 @@ function afterMove(){
     const m=state.moves[p.id]; if(!m||m.dir===0) continue; const k=ST[p.pos].ev;
     if(k==='blue'||k==='red'){ const amt=Math.round((3+Math.floor(Math.random()*18))*100*(1+state.month/30)/100)*100;
       const ev=(k==='blue'?EV_BLUE:EV_RED)[Math.floor(Math.random()*(k==='blue'?EV_BLUE:EV_RED).length)];
-      if(k==='blue'){ p.money+=amt; lines.push(`🔵 ${p.name}：${ev}！ +${yen(amt)}`); }
-      else { p.money-=amt; lines.push(`🔴 ${p.name}：${ev}… −${yen(amt)}`); }
+      const ei=(k==='blue'?EV_BLUE:EV_RED).indexOf(ev);
+      if(k==='blue'){ p.money+=amt; lines.push(`🔵 ${p.name}：${ev}！ +${yen(amt)}`); cutin('b'+ei,p,ev+'！',amt,true); }
+      else { p.money-=amt; lines.push(`🔴 ${p.name}：${ev}…`+` −${yen(amt)}`); cutin('r'+ei,p,ev+'…',-amt,false); }
       state.evfx={seq:(state.evfx?.seq||0)+1,list:[...(state.evfx?.list||[]).slice(-6)]}; state.evfx.list.push({id:p.id,k,amt}); }
   }
   const r=curP(), rm=state.moves[r.id];
   if(!r.finished){ const x=Math.random();
-    if(x<0.10){ r.express=true; lines.push(`🎫 ${r.name} 特急券ゲット！次の手番はサイコロ2個`); }
-    else if(x<0.16){ r.rest=1; lines.push(`🌀 ${r.name} 台風接近！次の移動はお休み`); }
-    else if(x<0.26 && ST[r.pos].kind==='st'){ const b=(5+Math.floor(Math.random()*16))*100; r.money+=b; lines.push(`🎉 ${r.name} ${ST[r.pos].n}のご当地祭りで${yen(b)}の臨時収入`); }
+    if(x<0.10){ r.express=true; lines.push(`🎫 ${r.name} 特急券ゲット！次の手番はサイコロ2個`); cutin('express',r,'特急券ゲット！<br>次はサイコロ2個',0,true); }
+    else if(x<0.16){ r.rest=1; lines.push(`🌀 ${r.name} 台風接近！次の移動はお休み`); cutin('typhoon',r,'台風接近！<br>次の移動はお休み',0,false); }
+    else if(x<0.26 && ST[r.pos].kind==='st'){ const b=(5+Math.floor(Math.random()*16))*100; r.money+=b; lines.push(`🎉 ${r.name} ${ST[r.pos].n}のご当地祭りで${yen(b)}の臨時収入`); cutin('fest',r,`${ST[r.pos].n}の<br>ご当地祭り！`,b,true); }
   }
   if(lines.length){ toast(lines.join('<br>')); lines.forEach(l=>addChat('📢','#888',strip(l))); }
   state.moves=null;
@@ -671,7 +692,7 @@ function doBuy(p,k){
   const s=p.pos, pr=ST[s].props[k];
   if(!pr || ownerOf(s,k) || p.money<pr.price) return;
   state.owners[pkey(s,k)]=p.id; p.money-=pr.price;
-  if(monopolist(s)===p.id){ toast(`👑 ${p.name} が ${ST[s].n} を独占！<br>収益・通行料が2倍に`); addChat('👑','#888',`${p.name} が ${ST[s].n} を独占`); }
+  if(monopolist(s)===p.id){ cutin('mono',p,`${ST[s].n}を独占！<br>収益・通行料2倍`,0,true); toast(`👑 ${p.name} が ${ST[s].n} を独占！<br>収益・通行料が2倍に`); addChat('👑','#888',`${p.name} が ${ST[s].n} を独占`); }
   commit();
 }
 function endTurn(){
@@ -686,7 +707,7 @@ function endTurn(){
 }
 function doSettle(){
   const rows=state.players.map(p=>{ const inc=income(p); p.money+=inc; return {n:p.name,c:p.color,inc}; });
-  state.settle={seq:(state.settle?.seq||0)+1,month:state.month,rows};
+  state.settle={seq:(state.settle?.seq||0)+1,month:state.month,rows}; cutin('settle',null,`${state.month}ヶ月目の決算！`,0,true);
   state.msg=`📊 ${state.month}ヶ月目の決算！`;
 }
 function endGame(){
@@ -836,6 +857,7 @@ function render(){
   if(state.diceSeq!==lastDiceSeq){ lastDiceSeq=state.diceSeq; if(state.dice) showDice(state.dice); }
   if(state.roulette && state.roulette.seq!==lastRoulSeq){ lastRoulSeq=state.roulette.seq; showRoulette(state.roulette); }
   if(state.fx && state.fx.seq!==lastFxSeq){ lastFxSeq=state.fx.seq; fxAt=Date.now(); }
+  feedCutins(state.cutin);
   if(state.toast && state.toast.seq!==lastToastSeq){ lastToastSeq=state.toast.seq; showToast(state.toast.text); }
   if(state.phase==='end') $('toast').classList.remove('show');
   renderModal(myTurn);
@@ -920,7 +942,19 @@ function showRoulette(R){ const el=$('roul'), nm=$('roulName'), sub=$('roulSub')
     else { nm.textContent=R.pick; el.classList.add('done'); sub.textContent='に決定！'; roulTm=setTimeout(()=>el.classList.add('hidden'),2000); } };
   spin(); }
 let toastTm=null;
-function showToast(html){ const t=$('toast'); t.innerHTML=html; t.classList.add('show'); clearTimeout(toastTm); toastTm=setTimeout(()=>t.classList.remove('show'),2300); }
+const CUT_IMG={}; ['arrive','mono','steal','settle','typhoon','express','fest',...[0,1,2,3,4,5,6,7].flatMap(i=>['b'+i,'r'+i])].forEach(k=>{ const im=new Image(); im.src='cuts/'+k+'.webp'; CUT_IMG[k]=im; });
+let lastCutId=null, cutQ=[], cutBusy=false, toastHold=null;
+function feedCutins(c){ if(lastCutId===null){ lastCutId=c?c.n:0; return; } if(!c) return; c.items.filter(it=>it.id>lastCutId).forEach(it=>cutQ.push(it)); lastCutId=c.n; if(!cutBusy) playCut(); }
+function playCut(){ const el=$('cutin'); const it=cutQ.shift();
+  if(!it){ cutBusy=false; el.className='hidden'; if(toastHold){ const h=toastHold; toastHold=null; showToast(h); } return; }
+  cutBusy=true; const a=it.amt? (it.amt>0?'+':'−')+yenS(Math.abs(it.amt)) : '';
+  el.innerHTML=`<div class="band"></div><div class="ccard"><img src="cuts/${it.img}.webp" alt=""><div class="txt">${it.who?`<span class="who" style="background:${it.col}">${esc(it.who)}</span>`:''}<div class="ttl">${it.ttl}</div>${a?`<div class="amt">${a}</div>`:''}</div></div>`;
+  el.className=it.good?'good':'bad'; void el.offsetWidth; el.classList.add('on');
+  if(!it.good){ const g=$('game'); g.classList.remove('shake'); void g.offsetWidth; g.classList.add('shake'); }
+  const dur=cutQ.length>2?1100:1700;
+  setTimeout(()=>{ el.classList.add('out'); setTimeout(playCut,330); },dur);
+}
+function showToast(html){ if(cutBusy){ toastHold=html; return; } const t=$('toast'); t.innerHTML=html; t.classList.add('show'); clearTimeout(toastTm); toastTm=setTimeout(()=>t.classList.remove('show'),2300); }
 
 function renderModal(myTurn){
   const M=$('modal'), C=$('mcard'); let html='', center=false;
@@ -1384,7 +1418,7 @@ cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
 cv.addEventListener('wheel',e=>{ e.preventDefault(); cam.tz=Math.max(0.15,Math.min(3,cam.tz*(e.deltaY<0?1.1:0.9))); },{passive:false});
 
 // テスト用フック
-window.__gdt={get state(){return state;},ST,NEXT:ADJ,get DIST(){return DD();},DD,act,startHost,cam,cpuCheck,doRoulette};
+window.__gdt={cutin,get state(){return state;},ST,NEXT:ADJ,get DIST(){return DD();},DD,act,startHost,cam,cpuCheck,doRoulette};
 </script>
 </body>
 </html>
