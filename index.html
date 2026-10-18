@@ -83,6 +83,14 @@ button{font-family:inherit;cursor:pointer;border:0}
 #game.shake{animation:cshake .3s 2}
 #turnCut{position:fixed;inset:0;z-index:28;pointer-events:none;display:flex;align-items:center;overflow:hidden}
 #turnCut .tband{width:100%;height:110px;background:linear-gradient(90deg,transparent,var(--pc) 12%,var(--pc) 88%,transparent);display:flex;align-items:center;justify-content:center;transform:scaleY(0);transition:transform .25s;box-shadow:0 0 0 4px rgba(255,255,255,.85)}
+#turnCut{justify-content:center}
+#turnCut .tb2{position:relative;width:min(98vw,600px);transform:translateX(110vw) skewX(-8deg);transition:transform .38s cubic-bezier(.2,1.3,.4,1);filter:drop-shadow(0 6px 10px rgba(0,0,0,.45))}
+#turnCut .tb2 img{width:100%;display:block}
+#turnCut.on .tb2{transform:translateX(0) skewX(0)}
+#turnCut.out .tb2{transform:translateX(-110vw) skewX(8deg);transition:transform .3s ease-in}
+#turnCut .tt{position:absolute;left:30%;right:6%;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center;align-items:flex-start}
+#turnCut .tt .tsub{font-size:clamp(11px,3vw,15px)}
+#turnCut .tt .tname{font-size:clamp(20px,6.6vw,38px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 #turnCut .ticon{width:76px;height:76px;border-radius:50%;border:4px solid #fff;box-shadow:0 3px 0 rgba(0,0,0,.35);margin-bottom:-6px}
 #turnCut .tband{height:150px!important}
 #turnCut .tin{display:flex;flex-direction:column;align-items:center;transform:translateX(100vw);transition:transform .35s cubic-bezier(.2,1.3,.4,1)}
@@ -1010,7 +1018,9 @@ function showRoulette(R){ const el=$('roul'), nm=$('roulName'), sub=$('roulSub')
 let toastTm=null;
 const CUT_IMG={}; ['arrive','mono','steal','settle','typhoon','express','fest',...[0,1,2,3,4,5,6,7].flatMap(i=>['b'+i,'r'+i])].forEach(k=>{ const im=new Image(); im.src='cuts/'+k+'.webp'; CUT_IMG[k]=im; });
 ['ok','ng','buy','stealfail','toll','startband','lastmonth','rank1','rank2','rank3','ranklast','endband','resultbg'].forEach(k=>{ const im=new Image(); im.src='ui/'+k+'.webp'; });
-const ICON_OF=[3,0,1,2,5,4,0,2]; function iconOf(p){ const i=COLORS.indexOf(p.color); return 'ui/icon'+(ICON_OF[i<0?0:i])+'.webp'; }
+const BAND_OF=['red','blue','green','orange','purple','pink','cyan','yellow']; function bandKey(p){ const i=COLORS.indexOf(p.color); return BAND_OF[i<0?0:i]; }
+function iconOf(p){ return 'ui/face_'+bandKey(p)+'.webp'; }
+BAND_OF.forEach(k=>{ const a=new Image(); a.src='ui/band_'+k+'.webp'; const b=new Image(); b.src='ui/face_'+k+'.webp'; });
 let lastCutId=null, cutQ=[], cutBusy=false, toastHold=null;
 function feedCutins(c){ if(lastCutId===null){ lastCutId=c?c.n:0; return; } if(!c) return; c.items.filter(it=>it.id>lastCutId).forEach(it=>cutQ.push(it)); lastCutId=c.n; if(!cutBusy) playCut(); }
 function playCut(){ const el=$('cutin'); const it=cutQ.shift();
@@ -1023,7 +1033,7 @@ function playCut(){ const el=$('cutin'); const it=cutQ.shift();
   setTimeout(()=>{ el.classList.add('out'); setTimeout(playCut,330); },dur);
 }
 function showTurnCut(p){ const el=$('turnCut'); const mine=p.id===myId;
-  el.innerHTML=`<div class="tband" style="--pc:${p.color}"><div class="tin"><span class="tsub">${state.month}/${state.maxMonth}ヶ月目</span><span class="tname">${mine?'あなたの番！':esc(p.name)+' の番'}</span></div></div>`; el.querySelector('.tin').insertAdjacentHTML('afterbegin',`<img class="ticon" src="${iconOf(p)}">`);
+  el.innerHTML=`<div class="tb2"><img src="ui/band_${bandKey(p)}.webp" alt=""><div class="tt"><span class="tsub">${state.month}/${state.maxMonth}ヶ月目</span><span class="tname">${mine?'あなたの番！':esc(p.name)+' の番'}</span></div></div>`;
   el.className=''; void el.offsetWidth; el.classList.add('on'); clearTimeout(el._tm); el._tm=setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.className='hidden',400); },1400); }
 let resultShown=false, resTm=[];
 function showResult(){
