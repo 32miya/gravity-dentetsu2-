@@ -40,6 +40,8 @@ button{font-family:inherit;cursor:pointer;border:0}
 #plist .pc b{font-size:12px}
 #plist .more{font-size:10px;color:#888;text-align:center}
 #tools{position:fixed;right:8px;top:calc(64px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:8px;z-index:5}
+#chHint{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6;background:#1e1a18;color:#fff;border:3px solid #ffb020;border-radius:999px;padding:8px 16px;font-size:15px;font-weight:bold;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,.35);pointer-events:none;animation:chb 1s ease-in-out infinite alternate}
+@keyframes chb{to{transform:translateX(-50%) translateY(-4px)}}
 #destTag{position:fixed;left:8px;top:calc(8px + env(safe-area-inset-top));z-index:5;background:rgba(255,255,255,.92);border:2px solid #f0b400;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:bold;box-shadow:0 2px 5px rgba(0,0,0,.25);pointer-events:none}
 #tools button.on{background:#fff1c4;box-shadow:inset 0 0 0 3px #f0b400}
 #plist{top:calc(8px + env(safe-area-inset-top))!important}
@@ -145,6 +147,7 @@ button{font-family:inherit;cursor:pointer;border:0}
   <div id="banner"></div>
   <div id="plist"></div>
   <div id="destTag"></div>
+  <div id="chHint" class="hidden"></div>
   <div id="tools">
     <button id="followBtn" title="現在地へ">📍</button>
     <button id="mapBtn" title="全体地図">🗾</button>
@@ -843,6 +846,8 @@ function render(){
   if(!inGame) return;
   $('banner').innerHTML=esc(state.msg);
   // プレイヤー一覧
+  { const mc=state.phase==='choice'&&state.chooser===myId; $('chHint').classList.toggle('hidden',!mc);
+    if(mc){ const l=state.moves&&state.moves[myId]?state.moves[myId].left:0; $('chHint').textContent=`👆 進む方向の矢印をタップ（残り${l}マス）`; if(lastPhase!=='choice') follow=true; } }
   $('destTag').classList.toggle('hidden',listMini||state.dest==null); $('destTag').textContent='🎯 '+(state.dest!=null?ST[state.dest].n:'');
   $('plist').classList.toggle('hidden',!listMini); $('plist').classList.remove('slim');
   const head=`<div class="head"><span>📅 ${Math.min(state.month,state.maxMonth)}/${state.maxMonth}ヶ月</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>`;
@@ -968,8 +973,7 @@ function renderModal(myTurn){
   if(state.phase==='choice' && state.chooser===myId){
     const cp=P(myId);
     const left=state.moves&&state.moves[myId]?state.moves[myId].left:0; const land=o=>o.hit?'🎯目的地に到着！':ST[o.land].ev==='blue'?'🔵入金マス':ST[o.land].ev==='red'?'🔴出金マス':ST[o.land].kind==='st'?'🚉'+ST[o.land].n:'中継マス';
-    html=`<h2>🔀 進む方向を選択</h2><div class="q">残り ${left} マス</div>
-    <div class="stack">${(state.chooseOpts||[]).map((o,i)=>`<button class="btn chb ${i?'brown':''}" data-ch="${i}">${esc(o.dir)} 方面</button>`).join('')}</div>`;
+
   } else if((state.phase==='quiz'||state.phase==='reveal') && state.quiz){
     const q=state.quiz, meP=P(myId), rev=state.phase==='reveal';
     const canAns=meP && !meP.finished && state.phase==='quiz', my=q.answers[myId], hint=q.hint.includes(myId);
@@ -1251,11 +1255,13 @@ function frame(now){
   ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle='#256fb3'; ctx.fillRect(0,0,cv.width,cv.height);
   // カメラ
   if(state && state.players.length && follow){
-    const group=['quiz','reveal','moving','choice','after'].includes(state.phase);
+    const myChoice=state.phase==='choice'&&state.chooser===myId&&P(myId)&&disp[myId];
+    if(myChoice){ const d=disp[myId]; cam.tx=d.x; cam.ty=d.y; cam.tz=Math.max(1.1,Math.min(1.6,cam.tz)); }
+    const group=!myChoice&&['quiz','reveal','moving','choice','after'].includes(state.phase);
     const ps=group?state.players.filter(p=>!p.finished&&disp[p.id]):[];
     if(ps.length>1){ let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; ps.forEach(p=>{const d=disp[p.id]; x0=Math.min(x0,d.x);x1=Math.max(x1,d.x);y0=Math.min(y0,d.y);y1=Math.max(y1,d.y);});
       cam.tx=(x0+x1)/2; cam.ty=(y0+y1)/2+60; cam.tz=Math.max(0.3,Math.min(1.4,Math.min(innerWidth/(x1-x0+220),innerHeight*0.45/(y1-y0+160)))); }
-    else { const p=curP(); const dp=p&&disp[p.id]; if(dp){ cam.tx=dp.x; cam.ty=dp.y+30/cam.z; } }
+    else if(!myChoice){ const p=curP(); const dp=p&&disp[p.id]; if(dp){ cam.tx=dp.x; cam.ty=dp.y+30/cam.z; } }
   }
   cam.x+=(cam.tx-cam.x)*0.12; cam.y+=(cam.ty-cam.y)*0.12; cam.z+=(cam.tz-cam.z)*0.15;
   const z=cam.z*DPR;
@@ -1405,25 +1411,65 @@ function frame(now){
         ctx.beginPath(); ctx.moveTo(x-7*DPR,ay-6*DPR); ctx.lineTo(x+7*DPR,ay-6*DPR); ctx.lineTo(x,ay+2*DPR); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     }
   }
+  drawChoiceArrows(t);
+}
+// 進行方向の矢印（マップ上でタップして選ぶ）
+let arrowHits=[];
+function drawChoiceArrows(t){
+  arrowHits=[];
+  if(!state || state.phase!=='choice' || state.chooser!==myId || !state.chooseOpts) return;
+  const me=P(myId); if(!me) return; const s=ST[me.pos], dp=disp[me.id]||s;
+  const [cx,cy]=w2s(dp.x,dp.y);
+  // 方向（画面上の角度）を求め、近すぎる矢印は左右に広げる
+  let arr=state.chooseOpts.map((o,i)=>{ const n=ST[o.to]; return {i,o,a:Math.atan2(n.y-s.y,n.x-s.x)}; }).sort((a,b)=>a.a-b.a);
+  const MIN=0.62;
+  for(let it=0;it<6;it++) for(let k=0;k<arr.length;k++){ const A=arr[k], B=arr[(k+1)%arr.length]; if(arr.length<2) break;
+    let d=B.a-A.a; if(k===arr.length-1) d+=Math.PI*2; if(d<MIN){ const push=(MIN-d)/2; A.a-=push; B.a+=push; } }
+  const R=78*DPR, pulse=(Math.sin(t/200)+1)/2;
+  for(const A of arr){
+    const ux=Math.cos(A.a), uy=Math.sin(A.a), px=-uy, py=ux;
+    const ax=cx+ux*R, ay=cy+uy*R, L=30*DPR, W=17*DPR, sh=9*DPR;
+    // 点線ガイド
+    ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.lineWidth=3*DPR; ctx.setLineDash([5*DPR,5*DPR]);
+    ctx.beginPath(); ctx.moveTo(cx+ux*22*DPR,cy+uy*22*DPR); ctx.lineTo(ax-ux*L*0.6,ay-uy*L*0.6); ctx.stroke(); ctx.setLineDash([]);
+    // 矢印本体
+    const tip=[ax+ux*(L*0.6+pulse*5*DPR), ay+uy*(L*0.6+pulse*5*DPR)];
+    const pts=[tip,[ax+px*W,ay+py*W],[ax+px*sh,ay+py*sh],[ax-ux*L*0.7+px*sh,ay-uy*L*0.7+py*sh],[ax-ux*L*0.7-px*sh,ay-uy*L*0.7-py*sh],[ax-px*sh,ay-py*sh],[ax-px*W,ay-py*W]];
+    ctx.beginPath(); pts.forEach((q,k)=>k?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.closePath();
+    ctx.lineJoin='round'; ctx.lineWidth=7*DPR; ctx.strokeStyle='#1e1a18'; ctx.stroke();
+    ctx.lineWidth=3.5*DPR; ctx.strokeStyle='#fff'; ctx.stroke();
+    ctx.fillStyle=`hsl(${28+pulse*10},100%,${52+pulse*6}%)`; ctx.fill();
+    // 方面ラベル
+    const lab=A.o.dir+' 方面'; ctx.font=`bold ${Math.round(12*DPR)}px sans-serif`; const tw=ctx.measureText(lab).width;
+    const lx=ax+ux*(L*0.6+20*DPR), ly=ay+uy*(L*0.6+16*DPR);
+    const bw=tw+14*DPR, bh=20*DPR; ctx.fillStyle='#1e1a18'; ctx.beginPath(); ctx.roundRect(lx-bw/2-1.5*DPR,ly-bh/2-1.5*DPR,bw+3*DPR,bh+3*DPR,8*DPR); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.roundRect(lx-bw/2,ly-bh/2,bw,bh,7*DPR); ctx.fill();
+    ctx.fillStyle='#1e1a18'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(lab,lx,ly); ctx.textAlign='start'; ctx.textBaseline='alphabetic';
+    arrowHits.push({i:A.i,x:ax/DPR,y:ay/DPR,lx:lx/DPR,ly:ly/DPR});
+  }
 }
 
 requestAnimationFrame(frame);
 
 // パン・ピンチ操作
 const ptrs=new Map(); let pinch0=null;
-cv.addEventListener('pointerdown',e=>{ cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); });
+let tapStart=null;
+cv.addEventListener('pointerdown',e=>{ cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); tapStart=ptrs.size===1?{x:e.clientX,y:e.clientY,t:Date.now()}:null; });
+function tryArrowTap(x,y){ if(!arrowHits.length) return false; let best=null,bd=1e9;
+  for(const h of arrowHits){ const d=Math.min(Math.hypot(h.x-x,h.y-y),Math.hypot(h.lx-x,h.ly-y)); if(d<bd){bd=d;best=h;} }
+  if(best && bd<44){ arrowHits=[]; sendAct('choose',best.i); return true; } return false; }
 cv.addEventListener('pointermove',e=>{
   if(!ptrs.has(e.pointerId)) return; const prev=ptrs.get(e.pointerId); const cur={x:e.clientX,y:e.clientY}; ptrs.set(e.pointerId,cur);
   if(ptrs.size===1){ const dx=cur.x-prev.x, dy=cur.y-prev.y; if(Math.abs(dx)+Math.abs(dy)>0){ follow=false; cam.tx-=dx/cam.z; cam.ty-=dy/cam.z; cam.x=cam.tx; cam.y=cam.ty; } }
   else if(ptrs.size===2){ const [a,b]=[...ptrs.values()]; const dist=Math.hypot(a.x-b.x,a.y-b.y);
     if(pinch0){ cam.tz=Math.max(0.15,Math.min(3,cam.tz*dist/pinch0)); cam.z=cam.tz; } pinch0=dist; follow=false; }
 });
-const up=e=>{ ptrs.delete(e.pointerId); if(ptrs.size<2) pinch0=null; };
+const up=e=>{ if(tapStart && e.type==='pointerup' && Math.hypot(e.clientX-tapStart.x,e.clientY-tapStart.y)<10 && Date.now()-tapStart.t<600) tryArrowTap(e.clientX,e.clientY); tapStart=null; ptrs.delete(e.pointerId); if(ptrs.size<2) pinch0=null; };
 cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
 cv.addEventListener('wheel',e=>{ e.preventDefault(); cam.tz=Math.max(0.15,Math.min(3,cam.tz*(e.deltaY<0?1.1:0.9))); },{passive:false});
 
 // テスト用フック
-window.__gdt={cutin,get state(){return state;},ST,NEXT:ADJ,get DIST(){return DD();},DD,act,startHost,cam,cpuCheck,doRoulette};
+window.__gdt={cutin,moveTick,get state(){return state;},ST,NEXT:ADJ,get DIST(){return DD();},DD,act,startHost,cam,cpuCheck,doRoulette};
 </script>
 </body>
 </html>
