@@ -56,6 +56,8 @@ button{font-family:inherit;cursor:pointer;border:0}
 #chHint .chbtns{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:5px}
 #chHint .chbtns button{background:#ff9a1a;color:#fff;font-weight:bold;font-size:13px;padding:5px 9px;border-radius:10px;border:2px solid #fff}
 #chHint .chbtns button.best{background:#e8302a}
+#roomTag{position:fixed;left:8px;top:calc(40px + env(safe-area-inset-top));z-index:5;background:rgba(30,26,24,.85);color:#fff;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:bold;cursor:pointer}
+#recon{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:40;background:#fff;border:4px solid #2b2420;border-radius:18px;padding:14px 18px;text-align:center;font-size:15px;box-shadow:0 8px 20px rgba(0,0,0,.4);width:min(90vw,380px)}
 #destTag{position:fixed;left:8px;top:calc(8px + env(safe-area-inset-top));z-index:5;background:rgba(255,255,255,.92);border:2px solid #f0b400;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:bold;box-shadow:0 2px 5px rgba(0,0,0,.25);pointer-events:none}
 #tools button.on{background:#fff1c4;box-shadow:inset 0 0 0 3px #f0b400}
 #plist{top:calc(8px + env(safe-area-inset-top))!important}
@@ -229,11 +231,13 @@ button{font-family:inherit;cursor:pointer;border:0}
   <div id="banner"></div>
   <div id="plist"></div>
   <div id="destTag"></div>
+  <div id="roomTag" class="hidden"></div>
   <div id="chHint" class="hidden"></div>
   <div id="tools">
     <button id="followBtn" title="現在地へ">📍</button>
     <button id="mapBtn" title="全体地図">🗾</button>
     <button id="listBtn" title="一覧の開閉">👥</button>
+    <button id="exitBtn" title="退出">🚪</button>
   </div>
   <div id="cardBar" class="hidden"></div>
   <button id="actBtn" class="btn hidden">サイコロを振る</button>
@@ -250,6 +254,7 @@ button{font-family:inherit;cursor:pointer;border:0}
 <div id="minicut" class="hidden"></div>
 <div id="turnCut" class="hidden"></div>
 <div id="result" class="hidden"></div>
+<div id="recon" class="hidden"><div class="rt2"></div></div>
 <div id="modal" class="hidden"><div class="card" id="mcard"></div></div>
 
 <div id="title" class="screen">
@@ -263,10 +268,11 @@ button{font-family:inherit;cursor:pointer;border:0}
       <button class="btn green" id="soloBtn">ひとりで遊ぶ（CPU対戦）</button>
     </div>
     <div id="err"></div>
+    <div id="resumeBox"></div>
     <div id="qinfo">📚 問題を読み込み中…</div>
     <div id="repInfo" class="hidden"><span></span> <button id="repExp">書き出す</button> <button id="repClr">消去</button></div>
     <label class="filebtn">＋ 問題ファイル(JSON)を追加で読み込む<input type="file" id="qfile" accept=".json,application/json" multiple hidden></label>
-    <div class="howto">🚂 ルーレットで決まる目的地をめざす日本一周すごろく<br>🎲 手番の人がサイコロを振ってご当地クイズに挑戦<br>🎯 出目でジャンルと難易度が決まる<br>　1🍜グルメ・名所・祭り 2💋恋愛・大人の雑学 3🎬アニメ<br>　4📺昭和平成 5📜歴史・オカルト 6🧭地理・雑学<br>⭕ 正解なら出目の数だけ進む／❌ 不正解ならその場にとどまる<br>🏢 手番の人が正解したら、止まった駅の物件を買える<br>👑 駅の物件を全部買うと「独占」で収益・通行料2倍<br>💥 他人の独占駅に正解して止まったら、サイコロで奇数を出せば1件買い取れる<br>🟨 カード売り場で便利カードを買える（サイコロの前に使用）。順位が下の人ほど安く、最下位はプレゼントも<br>🤫 他の人の手番でもこっそり答えて当たれば賞金<br>🏁 目的地に決まった回数たどり着いたらゲーム終了<br>💰 全員が1周で1ヶ月、3ヶ月ごとに決算。最後は総資産で勝負！</div>
+    <div class="howto">🚂 ルーレットで決まる目的地をめざす日本一周すごろく<br>🎲 手番の人がサイコロを振ってご当地クイズに挑戦<br>🎯 出目でジャンルと難易度が決まる<br>　1🍜グルメ・名所・祭り 2💋恋愛・大人の雑学 3🎬アニメ<br>　4📺昭和平成 5📜歴史・オカルト 6🧭地理・雑学<br>⭕ 正解なら出目の数だけ進む／❌ 不正解ならその場にとどまる<br>🏢 手番の人が正解したら、止まった駅の物件を買える<br>👑 駅の物件を全部買うと「独占」で収益・通行料2倍<br>💥 他人の独占駅に正解して止まったら、サイコロで奇数を出せば1件買い取れる<br>🟨 カード売り場で便利カードを買える（サイコロの前に使用）。順位が下の人ほど安く、最下位はプレゼントも<br>🤫 他の人の手番でもこっそり答えて当たれば賞金<br>🏁 目的地に決まった回数たどり着いたらゲーム終了<br>📶 通信が切れても自動で再接続（その間はCPUが代行）。途中参加・途中退出もOK<br>💰 全員が1周で1ヶ月、3ヶ月ごとに決算。最後は総資産で勝負！</div>
   </div>
 </div>
 
@@ -571,6 +577,14 @@ const pkey=(s,k)=>s+'-'+k;
 let state = null;          // 共有状態（ホストが正）
 let myId = null, isHost = false, roomCode = null;
 let peer = null, conns = [], hostConn = null;
+// 端末ごとの固定ID（再接続しても同じプレイヤーに戻るため）
+const MY_TOK=(()=>{ try{ let t=localStorage.getItem('gdt2_tok'); if(!t){ t=Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4); localStorage.setItem('gdt2_tok',t); } return t; }catch(e){ return Math.random().toString(36).slice(2,12); } })();
+let saveTm=null;
+function saveHostGame(){ clearTimeout(saveTm); saveTm=setTimeout(()=>{ try{ if(!state||state.phase==='lobby'&&!roomCode) return;
+  if(state.phase==='end'){ localStorage.removeItem('gdt2_host'); return; }
+  localStorage.setItem('gdt2_host',JSON.stringify({room:roomCode,at:Date.now(),state})); }catch(e){} },600); }
+function loadSaved(k){ try{ const d=JSON.parse(localStorage.getItem(k)||'null'); if(d&&Date.now()-d.at<6*3600e3) return d; }catch(e){} return null; }
+function clearSaved(){ try{ localStorage.removeItem('gdt2_host'); localStorage.removeItem('gdt2_last'); }catch(e){} }
 let myName = '';
 try{ myName = localStorage.getItem('gdt2name')||''; }catch(e){}
 
@@ -588,7 +602,7 @@ function income(p){ let v=0; for(const key in state.owners) if(state.owners[key]
 let cpuTimer=null;
 function commit(){
   state.seq++;
-  render();
+  render(); if(isHost) saveHostGame();
   if(isHost){ const msg={t:'state',s:state}; conns.forEach(c=>{try{c.open&&c.send(msg);}catch(e){}}); cpuCheck(); }
 }
 function toast(text,to){ state.toast={seq:(state.toast?.seq||0)+1,items:Array.isArray(text)?text:[{t:text,to:to||null}]}; }
@@ -943,45 +957,87 @@ function bindHostPeer(){
     c.on('error',()=>{});
   });
 }
+function midJoin(pid,name){
+  addPlayer(pid,name,false); const p=P(pid); const others=state.players.filter(x=>x!==p);
+  // 途中参加：所持金は他の人の平均、位置は最下位の人と同じ駅
+  if(others.length){ p.money=Math.round(others.reduce((a,x)=>a+x.money,0)/others.length/100)*100;
+    const low=others.slice().sort((a,b)=>assets(a)-assets(b))[0]; p.pos=low.pos; p.trail=[low.pos]; }
+  else { p.pos=START; p.trail=[START]; }
+  p.arrivals=0; addChat('🚉','#888',`${name} が途中参加しました（所持金 ${yen(p.money)}）`); toast(`🚉 ${esc(name)} が途中参加！`);
+}
 function onHostData(c,d){
   if(d.t==='join'){
     if(!conns.includes(c)) conns.push(c);
-    const name=String(d.name||'ゲスト').slice(0,10);
-    if(state.phase==='lobby' && state.players.length<8 && !P(c.peer)){ addPlayer(c.peer,name,false); addChat('🚉','#888',`${name} が参加しました`); }
-    else if(!P(c.peer)){ state.spect.push({id:c.peer,name}); addChat('👀','#888',`${name} が観戦に来ました`); }
+    const name=String(d.name||'ゲスト').slice(0,10), tok=String(d.tok||c.peer).replace(/[^\w-]/g,'').slice(0,40), pid='g_'+tok; c._pid=pid;
+    conns.filter(x=>x!==c&&x._pid===pid).forEach(x=>{ x._replaced=true; try{x.close();}catch(e){} }); conns=conns.filter(x=>!x._replaced);
+    const p=P(pid);
+    if(p && !p.left){ const back=p.away; p.away=false; if(p.awayCpu){ p.cpu=false; p.awayCpu=false; }
+      if(back){ addChat('🔁','#888',`${p.name} が復帰しました`); toast(`🔁 ${esc(p.name)} が復帰！`); } }
+    else if(!p && state.phase==='lobby' && state.players.length<8){ addPlayer(pid,name,false); addChat('🚉','#888',`${name} が参加しました`); }
+    else if(!p && state.phase!=='end' && state.phase!=='lobby' && state.players.length<8){ midJoin(pid,name); }
+    else if(!state.spect.some(x=>x.id===pid)){ state.spect.push({id:pid,name}); addChat('👀','#888',`${name} が観戦に来ました`); }
+    try{ c.send({t:'you',id:pid}); }catch(e){}
     commit();
-  } else if(d.t==='act'){ act(c.peer,d.a,d.v); }
+  } else if(d.t==='act'){ act(c._pid||c.peer,d.a,d.v); }
+  else if(d.t==='leave'){ leavePlayer(c._pid); c._left=true; try{c.close();}catch(e){} }
 }
+function leavePlayer(pid){ const p=P(pid);
+  if(p){ if(state.phase==='lobby') state.players=state.players.filter(x=>x!==p);
+    else { p.left=true; p.away=false; p.cpu=true; p.awayCpu=false; if(!/\(CPU\)$/.test(p.name)) p.name+='(CPU)'; }
+    addChat('🚪','#888',`${p.name} が退出しました${state.phase==='lobby'?'':'（以降はCPUが担当）'}`); }
+  state.spect=state.spect.filter(s=>s.id!==pid); commit(); }
 function onGuestLeave(c){
   conns=conns.filter(x=>x!==c);
-  const p=P(c.peer);
-  if(p){ if(state.phase==='lobby') state.players=state.players.filter(x=>x!==p);
-         else { p.cpu=true; p.name+='(CPU)'; } addChat('🚪','#888',`${p.name} が退出しました`); }
-  state.spect=state.spect.filter(s=>s.id!==c.peer);
+  if(c._replaced||c._left) return;
+  const pid=c._pid||c.peer, p=P(pid);
+  if(p && !p.left){ if(state.phase==='lobby'){ state.players=state.players.filter(x=>x!==p); addChat('🚪','#888',`${p.name} が退出しました`); }
+    else if(!p.away){ p.away=true; if(!p.cpu){ p.cpu=true; p.awayCpu=true; } addChat('📶','#888',`${p.name} の通信が切れました（戻るまでCPUが代行）`); } }
+  state.spect=state.spect.filter(s=>s.id!==pid);
   commit();
 }
-function startGuest(code){
+let guestRetry=0, guestRecon=false;
+function startGuest(code,silent){
   if(typeof Peer==='undefined'){ $('err').textContent='通信ライブラリを読み込めませんでした'; return; }
-  isHost=false; roomCode=code.toUpperCase(); $('err').textContent='サーバーに接続中…';
+  isHost=false; roomCode=code.toUpperCase(); const ERR=t=>{ if(silent) setRecon(t); else $('err').innerHTML=t; }; ERR('サーバーに接続中…');
+  try{ localStorage.setItem('gdt2_last',JSON.stringify({room:roomCode,at:Date.now()})); }catch(e){}
   let tries=0, opened=false, gotState=false, tm=null;
   peer=new Peer(peerOpts());
-  const tryConnect=()=>{ tries++; $('err').textContent=`ルーム ${roomCode} を探しています…（${tries}回目）`;
+  const tryConnect=()=>{ tries++; ERR(`ルーム ${roomCode} を探しています…（${tries}回目）`);
     const c=peer.connect(PREFIX+roomCode,{reliable:true}); hostConn=c;
     clearTimeout(tm); tm=setTimeout(()=>{ if(gotState) return;
       if(!opened){ if(tries<3) { tryConnect(); }
-        else $('err').innerHTML='ホストの端末と通信できませんでした。<br>・ホストは待機室の画面を開いたままにしてください<br>・違うネットワーク同士でつながらない場合は、同じWi-Fiにするか片方をモバイル回線にして試してください'; }
-      else $('err').textContent='接続はできましたが応答がありません。もう一度「参加」を押してください'; },8000);
-    c.on('open',()=>{ if(opened){ try{c.close();}catch(e){} return; } opened=true; hostConn=c; $('err').textContent='参加しています…'; c.send({t:'join',name:myName}); });
-    c.on('data',d=>{ if(d.t==='state'){ hostConn=c; clearTimeout(tm); gotState=true; const first=!state; state=d.s; if(first){ $('title').classList.add('hidden'); keepAwake(); } render(); } });
-    c.on('close',()=>{ if(gotState && c===hostConn){ alert('ホストとの接続が切れました'); location.href=location.pathname+'?room='+roomCode; } });
+        else if(silent) guestFail(); else $('err').innerHTML='ホストの端末と通信できませんでした。<br>・ホストは待機室の画面を開いたままにしてください<br>・違うネットワーク同士でつながらない場合は、同じWi-Fiにするか片方をモバイル回線にして試してください'; }
+      else if(silent) guestFail(); else $('err').textContent='接続はできましたが応答がありません。もう一度「参加」を押してください'; },8000);
+    c.on('open',()=>{ if(opened){ try{c.close();}catch(e){} return; } opened=true; hostConn=c; ERR('参加しています…'); c.send({t:'join',name:myName,tok:MY_TOK}); });
+    c.on('data',d=>{ if(d.t==='you'){ myId=d.id; return; } if(d.t==='state'){ hostConn=c; clearTimeout(tm); if(!gotState){ guestRetry=0; setRecon(null); } gotState=true; const first=!state; state=d.s; if(first){ $('title').classList.add('hidden'); keepAwake(); } render(); } });
+    c.on('close',()=>{ if(gotState && c===hostConn && !leaving){ guestReconnect(); } });
     c.on('error',()=>{});
   };
-  peer.on('open',id=>{ myId=id; tryConnect(); });
+  peer.on('open',id=>{ if(!state) myId=id; tryConnect(); });
   peer.on('error',e=>{
     if(e.type==='peer-unavailable'){ if(gotState) return; clearTimeout(tm); if(tries<3) setTimeout(tryConnect,1500);
-      else $('err').innerHTML=`ルーム ${roomCode} が見つかりません。<br>・コードが正しいか確認してください<br>・ホストが待機室の画面を閉じたりアプリを切り替えると、ルームが一時的に消えることがあります。ホストに画面を開き直してもらってから、もう一度「参加」を押してください`; }
-    else if(!gotState) $('err').textContent='通信エラー: '+e.type+'（電波の良い場所でもう一度お試しください）'; });
+      else if(silent) guestFail(); else $('err').innerHTML=`ルーム ${roomCode} が見つかりません。<br>・コードが正しいか確認してください<br>・ホストが待機室の画面を閉じたりアプリを切り替えると、ルームが一時的に消えることがあります。ホストに画面を開き直してもらってから、もう一度「参加」を押してください`; }
+    else if(!gotState){ if(silent) guestFail(); else $('err').textContent='通信エラー: '+e.type+'（電波の良い場所でもう一度お試しください）'; } });
 }
+
+let leaving=false;
+function setRecon(t){ const el=$('recon'); if(!el) return; if(!t){ el.classList.add('hidden'); return; } el.classList.remove('hidden'); el.querySelector('.rt2').innerHTML=t; }
+function guestReconnect(){ if(isHost||leaving) return; guestRecon=true; guestRetry++;
+  setRecon(`📶 通信が切れました。再接続しています…（${guestRetry}回目）<br><small>その間はCPUがあなたの代わりにプレイします</small>`);
+  try{ peer&&peer.destroy(); }catch(e){} hostConn=null; startGuest(roomCode,true); }
+function guestFail(){ if(guestRetry<40) setTimeout(guestReconnect,3000); else setRecon('再接続できませんでした。<button class="btn" onclick="location.href=location.pathname+\'?room=\'+roomCode">もう一度試す</button>'); }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && !isHost && roomCode && state && !leaving && !(liveConn())) guestReconnect(); });
+function leaveGame(){
+  if(isHost){ if(!confirm(roomCode?'ルームを解散してゲームを終了しますか？（全員の接続が切れます）':'ゲームを終了してタイトルに戻りますか？')) return; clearSaved(); location.href=location.pathname; return; }
+  if(!confirm('ゲームから退出しますか？（あなたの駒はCPUが引き継ぎます）')) return;
+  leaving=true; try{ const c=liveConn(); c&&c.send({t:'leave'}); }catch(e){} clearSaved(); setTimeout(()=>location.href=location.pathname,400); }
+function resumeHost(d){ isHost=true; myId='h'; state=d.state; roomCode=d.room||null; conns=[];
+  state.players.forEach(p=>{ if(p.id!=='h' && !p.cpu && !p.left){ p.away=true; p.cpu=true; p.awayCpu=true; } });
+  state.spect=[]; $('title').classList.add('hidden');
+  if(roomCode){ peer=new Peer(PREFIX+roomCode,peerOpts()); bindHostPeer(); keepAwake(); }
+  addChat('🔁','#888','ホストがゲームを再開しました');
+  if(state.phase==='lobby'){ render(); return; }
+  const i=state.cur; if(state.pendingRoulette) doRoulette(()=>beginTurn(i)); else beginTurn(i); }
 
 // ===================== 画面（タイトル・待機室） =====================
 $('nameIn').value=myName;
@@ -990,6 +1046,13 @@ $('qfile').onchange=async e=>{ for(const f of e.target.files){ try{ addQuestions
 const qs=new URLSearchParams(location.search); if(qs.get('room')) $('codeIn').value=qs.get('room').toUpperCase();
 function takeName(){ myName=($('nameIn').value.trim()||'旅人').slice(0,10); try{localStorage.setItem('gdt2name',myName);}catch(e){} }
 $('hostBtn').onclick=()=>{ takeName(); startHost(true); };
+(()=>{ const B=$('resumeBox'), h=loadSaved('gdt2_host'), g=loadSaved('gdt2_last'); let html='';
+  if(h&&h.state&&h.state.phase!=='end') html+=`<button class="btn" id="resHostBtn">🔁 ${h.room?`ルーム ${h.room} を`:'前回のゲームを'}再開する（ホスト）</button>`;
+  if(g&&g.room&&!(h&&h.room===g.room)) html+=`<button class="btn" id="resGuestBtn">🔁 ルーム ${g.room} に戻る</button>`;
+  B.innerHTML=html?`<div class="stack" style="margin:6px 0">${html}</div>`:'';
+  if($('resHostBtn')) $('resHostBtn').onclick=()=>{ takeName(); resumeHost(h); };
+  if($('resGuestBtn')) $('resGuestBtn').onclick=()=>{ takeName(); startGuest(g.room); };
+})();
 $('soloBtn').onclick=()=>{ takeName(); startHost(false); };
 $('joinBtn').onclick=()=>{ const c=$('codeIn').value.trim(); if(c.length<5){ $('err').textContent='5文字のルームコードを入力してください'; return; } takeName(); startGuest(c); };
 function showLobby(){ $('title').classList.add('hidden'); render(); }
@@ -1029,12 +1092,13 @@ function render(){
       if($('chHint').dataset.k!==key){ $('chHint').dataset.k=key; $('chHint').innerHTML=`<div>👆 地図の矢印をタップ（残り${l}マス）</div><div class="chbtns">${(state.chooseOpts||[]).map((o,i)=>`<button data-chb="${i}" class="${o.d===minD?'best':''}">${esc(o.dir)}方面</button>`).join('')}</div>`;
         $('chHint').querySelectorAll('[data-chb]').forEach(b=>b.onclick=()=>sendAct('choose',+b.dataset.chb)); }
       if(lastPhase!=='choice') follow=true; } else $('chHint').dataset.k=''; }
+  { const rt=$('roomTag'); rt.classList.toggle('hidden',!roomCode||listMini); if(roomCode) rt.textContent=`🔑 ルーム ${roomCode}`; }
   $('destTag').classList.toggle('hidden',listMini||state.dest==null); $('destTag').textContent='🎯 '+(state.dest!=null?ST[state.dest].n:'');
   $('plist').classList.toggle('hidden',!listMini); $('plist').classList.remove('slim');
   const head=`<div class="head"><span>🏁 ${state.goalsDone}/${state.goalN}</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>`;
   if(false) $('plist').innerHTML=head+`<div class="strip">`+state.players.map((p,i)=>`<div class="pc ${i===state.cur&&state.phase!=='end'?'cur':''}"><span class="dot" style="background:${p.color}"></span><span class="nm">${esc(p.name)}</span><b class="${p.money<0?'neg':''}">${yenS(p.money)}</b></div>`).join('')+`</div>`;
   else $('plist').innerHTML=`<div class="head"><span>📅 ${state.month}ヶ月目</span><span>🏁 目的地 ${state.goalsDone}/${state.goalN}${isHost?` <button class="gbtn" data-goal="-1">−</button><button class="gbtn" data-goal="1">＋</button>`:''}</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>`+
-   state.players.map((p,i)=>`<div class="row ${i===state.cur&&state.phase!=='end'?'cur':''}"><img class="pic" src="${iconOf(p)}" style="border-color:${p.color}"><span class="nm">${p.cpu?"🤖":""}${esc(p.name)}</span>
+   state.players.map((p,i)=>`<div class="row ${i===state.cur&&state.phase!=='end'?'cur':''}"><img class="pic" src="${iconOf(p)}" style="border-color:${p.color}"><span class="nm">${p.away?'📶':p.cpu?'🤖':''}${esc(p.name)}</span>
    <span>${ST[p.pos].n}</span><span class="left">${state.dest!=null?'(あと'+DD()[p.pos]+')':''}</span>${p.rest?'🌀':''}${p.express?'🎫':''}${p.lucky?'🍀':''}
    ${(p.cards||[]).length?`<span title="カード">🃏${p.cards.length}</span>`:''}<span class="mon ${p.money<0?'neg':''}">${yen(p.money)}</span></div>`).join('')+`<div class="more">タップで閉じる</div>`;
   // 行動ボタン
@@ -1333,6 +1397,9 @@ $('chatHead').onclick=$('chatLast').onclick=()=>{ const ch=$('chat'); ch.classLi
 $('chatForm').onsubmit=e=>{ e.preventDefault(); const v=$('chatIn').value; $('chatIn').value=''; sendAct('chat',v); };
 $('followBtn').onclick=()=>{ follow=true; cam.tz=1.4; };
 $('mapBtn').onclick=()=>{ follow=false; const s=Math.min(innerWidth/WW,innerHeight/WH)*0.95; cam.tz=s; cam.tx=WW/2; cam.ty=WH/2; };
+$('exitBtn').onclick=leaveGame;
+$('roomTag').onclick=async()=>{ const link=location.origin+location.pathname+'?room='+roomCode; try{ if(navigator.share) await navigator.share({title:'ぐらびてぃ電鉄2',text:`ルームコード ${roomCode} で参加してね！`,url:link}); else { await navigator.clipboard.writeText(link); toastLocal('招待リンクをコピーしました'); } }catch(e){} };
+function toastLocal(t){ showToast(t); }
 $('repExp').onclick=exportReps; $('repClr').onclick=()=>{ if(confirm('報告した問題の記録を消去しますか？')){ try{localStorage.removeItem('gdt2_reports')}catch(e){} updateRepInfo(); } }; updateRepInfo();
 $('plist').addEventListener('click',e=>{ const g=e.target.closest('[data-goal]'); if(g){ e.stopPropagation(); sendAct('setgoal',state.goalN+(+g.dataset.goal)); } },true);
 $('listBtn').onclick=$('plist').onclick=e=>{ if(e&&e.target&&e.target.closest&&e.target.closest('[data-goal]')) return; listMini=!listMini; $('listBtn').classList.toggle('on',listMini); render(); };
