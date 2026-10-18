@@ -24,6 +24,7 @@ button{font-family:inherit;cursor:pointer;border:0}
 #plist{position:fixed;left:8px;top:calc(8px + env(safe-area-inset-top));cursor:pointer;background:rgba(255,255,255,.93);border:2px solid #999;border-radius:12px;padding:6px 8px;font-size:13px;z-index:5;max-width:74vw}
 #plist .row{display:flex;align-items:center;gap:5px;padding:2px 0;white-space:nowrap}
 #plist .row.cur{background:#fff1c4;border-radius:6px}
+#plist .pic{width:24px;height:24px;border-radius:50%;border:2px solid;flex:none}
 #plist .dot{width:12px;height:12px;border-radius:50%;border:1.5px solid #222;flex:none}
 #plist .nm{max-width:5.5em;overflow:hidden;text-overflow:ellipsis}
 #plist .left{color:#e0306a}
@@ -53,6 +54,7 @@ button{font-family:inherit;cursor:pointer;border:0}
 .btn.chb{font-size:18px;padding:10px 12px;line-height:1.3}
 .btn.chb small{font-size:12px}
 #roul .rc{background:#fff8e1;border:4px solid #2b2420;border-radius:20px;padding:16px 26px;text-align:center;box-shadow:0 8px 0 rgba(0,0,0,.3);min-width:250px}
+#roul .rimg{width:150px;height:auto;display:block;margin:-6px auto 4px;border-radius:14px;border:3px solid #2b2420}
 #roul .rt{font-size:18px;color:#c4561a}
 #roul .rn{font-size:40px;margin:10px 0;padding:6px 10px;background:#2b2420;color:#ffd84a;border-radius:12px;letter-spacing:.05em}
 #roul .rs{font-size:15px;color:#555;min-height:20px}
@@ -81,11 +83,40 @@ button{font-family:inherit;cursor:pointer;border:0}
 #game.shake{animation:cshake .3s 2}
 #turnCut{position:fixed;inset:0;z-index:28;pointer-events:none;display:flex;align-items:center;overflow:hidden}
 #turnCut .tband{width:100%;height:110px;background:linear-gradient(90deg,transparent,var(--pc) 12%,var(--pc) 88%,transparent);display:flex;align-items:center;justify-content:center;transform:scaleY(0);transition:transform .25s;box-shadow:0 0 0 4px rgba(255,255,255,.85)}
+#turnCut .ticon{width:76px;height:76px;border-radius:50%;border:4px solid #fff;box-shadow:0 3px 0 rgba(0,0,0,.35);margin-bottom:-6px}
+#turnCut .tband{height:150px!important}
 #turnCut .tin{display:flex;flex-direction:column;align-items:center;transform:translateX(100vw);transition:transform .35s cubic-bezier(.2,1.3,.4,1)}
 #turnCut.on .tband{transform:scaleY(1)} #turnCut.on .tin{transform:translateX(0)}
 #turnCut.out .tin{transform:translateX(-100vw);transition:transform .3s ease-in} #turnCut.out .tband{transform:scaleY(0);transition-delay:.15s}
 #turnCut .tsub{color:#fff;font-size:14px;font-weight:bold;text-shadow:0 2px 0 rgba(0,0,0,.4)}
 #turnCut .tname{color:#fff;font-size:34px;font-weight:bold;text-shadow:3px 3px 0 #2b2420,-2px -2px 0 #2b2420,2px -2px 0 #2b2420,-2px 2px 0 #2b2420}
+#result{position:fixed;inset:0;z-index:32;background:#1b1530;overflow:auto;color:#fff}
+#result .stage{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center}
+#result .endimg{width:min(94vw,520px);border-radius:18px;border:4px solid #fff;box-shadow:0 10px 30px rgba(0,0,0,.6);animation:rpop .5s cubic-bezier(.2,1.4,.4,1)}
+#result .endwrap{position:relative}
+#result .endtxt{position:absolute;left:0;right:0;top:29%;color:#7a3b10;font-size:clamp(20px,6.5vw,34px);font-weight:bold}
+#result .rkimg{height:min(52vh,380px);border-radius:18px;border:4px solid #fff;box-shadow:0 10px 30px rgba(0,0,0,.6);animation:rpop .5s cubic-bezier(.2,1.4,.4,1)}
+#result .rkno{font-size:clamp(34px,11vw,56px);font-weight:bold;text-shadow:3px 3px 0 #000;margin-top:10px;animation:rpop .5s .15s both}
+#result .rknm{font-size:26px;font-weight:bold;padding:2px 16px;border-radius:999px;border:3px solid #fff;margin:4px 0;animation:rpop .5s .25s both}
+#result .rkas{font-size:30px;font-weight:bold;color:#ffd84a;text-shadow:2px 2px 0 #000;animation:rpop .5s .35s both}
+#result .skip{position:fixed;bottom:16px;right:16px;font-size:13px;opacity:.7}
+@keyframes rpop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+#result .final{min-height:100%;background:linear-gradient(rgba(20,14,40,.55),rgba(20,14,40,.85)),url(ui/resultbg.webp) center/cover fixed;padding:20px 14px 40px;display:flex;flex-direction:column;align-items:center}
+#result h2{margin:6px 0 12px;font-size:28px;color:#ffd84a;text-shadow:3px 3px 0 #000}
+#result .row{display:flex;align-items:center;gap:10px;width:min(96vw,460px);background:rgba(255,255,255,.95);color:#222;border-radius:16px;padding:8px 12px;margin:5px 0;border:3px solid #2b2420}
+#result .row.first{background:linear-gradient(#fff6c8,#ffe27a);transform:scale(1.03)}
+#result .row .th{width:46px;height:58px;object-fit:cover;border-radius:8px;border:2px solid #2b2420}
+#result .row .no{width:46px;text-align:center;font-size:24px;font-weight:bold}
+#result .row .ic{width:40px;height:40px;border-radius:50%;border:3px solid}
+#result .row .nm{font-weight:bold;font-size:17px}
+#result .row .st{font-size:11px;color:#666}
+#result .row .v{margin-left:auto;font-weight:bold;font-size:17px;white-space:nowrap}
+#result .aw{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:min(96vw,460px);margin-top:14px}
+#result .awc{background:rgba(255,255,255,.95);color:#222;border-radius:14px;padding:6px;display:flex;align-items:center;gap:8px;border:3px solid #2b2420;text-align:left}
+#result .awc img{width:52px;height:52px;border-radius:10px;object-fit:cover;flex:none}
+#result .awc b{font-size:13px;display:block}#result .awc span{font-size:12px}
+#result .conf{position:fixed;top:-20px;width:10px;height:14px;animation:cfall linear forwards;pointer-events:none}
+@keyframes cfall{to{transform:translateY(110vh) rotate(720deg)}}
 #toast{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%) scale(.6);background:#fff;border:3px solid var(--or);border-radius:16px;padding:12px 18px;font-size:18px;text-align:center;z-index:25;opacity:0;transition:.25s;pointer-events:none;max-width:88vw;box-shadow:0 6px 18px rgba(0,0,0,.3)}
 #toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
 #modal{position:fixed;inset:0;display:flex;align-items:flex-end;justify-content:center;z-index:15;pointer-events:none;padding:0 10px calc(78px + env(safe-area-inset-bottom))}
@@ -109,6 +140,9 @@ button{font-family:inherit;cursor:pointer;border:0}
 .chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:12px}
 .chip{font-size:13px;padding:3px 8px;border-radius:10px;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.4)}
 .props{max-height:min(38vh,330px);overflow-y:auto;margin:4px 0;border-top:1px dashed #cba;-webkit-overflow-scrolling:touch}
+.mhero{height:120px;margin:-14px -14px 10px;border-radius:14px 14px 0 0;background:center/cover;display:flex;align-items:flex-end;justify-content:center;padding:8px}
+.mhero span{background:rgba(30,26,24,.85);color:#ffd84a;font-size:20px;font-weight:bold;padding:4px 14px;border-radius:999px}
+.rkic{width:30px;height:30px;border-radius:50%;border:2px solid;flex:none}
 .prop{display:flex;align-items:center;gap:6px;padding:4px 4px;border-bottom:1px dashed #cba}
 .prop .info{flex:1;min-width:0}
 .prop .pn{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -131,6 +165,7 @@ button{font-family:inherit;cursor:pointer;border:0}
 #chatForm input{flex:1;border:0;padding:10px;font-size:16px;font-family:inherit;min-width:0}
 #chatForm button{background:#1a7ef0;color:#fff;padding:0 16px;font-size:16px}
 #chat.min #chatBody,#chat.min #chatForm{display:none}
+.screen .hero{display:block;width:calc(100% + 28px);margin:-14px -14px 8px;height:150px;object-fit:cover;border-radius:16px 16px 0 0}
 .screen{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:16px;background:linear-gradient(#5ab3e8,#2a6fb0)}
 .screen .card{max-width:420px;text-align:center;max-height:92vh}
 .logo{font-size:30px;color:var(--or);line-height:1.15;margin:4px 0 2px;text-shadow:2px 2px 0 #fff3d6}
@@ -171,14 +206,16 @@ button{font-family:inherit;cursor:pointer;border:0}
     <form id="chatForm"><input id="chatIn" maxlength="60" placeholder="メッセージ…" autocomplete="off"><button>送信</button></form>
   </div>
 </div>
-<canvas id="diceCv"></canvas><div id="roul" class="hidden"><div class="rc"><div class="rt">🎯 目的地ルーレット</div><div class="rn" id="roulName">…</div><div class="rs" id="roulSub"></div></div></div>
+<canvas id="diceCv"></canvas><div id="roul" class="hidden"><div class="rc"><img src="ui/roulette.webp" class="rimg" alt=""><div class="rt">🎯 目的地ルーレット</div><div class="rn" id="roulName">…</div><div class="rs" id="roulSub"></div></div></div>
 <div id="toast"></div>
 <div id="cutin" class="hidden"></div>
 <div id="turnCut" class="hidden"></div>
+<div id="result" class="hidden"></div>
 <div id="modal" class="hidden"><div class="card" id="mcard"></div></div>
 
 <div id="title" class="screen">
   <div class="card">
+    <img class="hero" src="ui/title.webp" alt="">
     <div class="logo">ぐらびてぃ電鉄2<small>〜日本縦断 買い占め列島〜</small></div>
     <input id="nameIn" type="text" maxlength="10" placeholder="あなたの名前">
     <div class="stack">
@@ -195,6 +232,7 @@ button{font-family:inherit;cursor:pointer;border:0}
 
 <div id="lobby" class="screen hidden">
   <div class="card">
+    <img class="hero" src="ui/lobbybg.webp" alt="">
     <h2 style="color:var(--br);margin:0">待機室</h2>
     <div id="lobbyCode"></div>
     <div id="lobbyShare" class="joinrow" style="justify-content:center;margin:6px 0"></div>
@@ -522,12 +560,13 @@ function startGame(){
   state.players=shuffle(state.players);
   state.players.forEach(p=>{ p.pos=START; p.trail=[START]; p.arrivals=0; });
   state.cur=0; state.month=1; state.dest=null;
-  addChat('🚉','#888','東京から日本一周の旅、出発進行！');
+  addChat('🚉','#888','東京から日本一周の旅、出発進行！'); cutin('ui/startband',null,'東京駅から<br>出発進行！',0,true);
   doRoulette(()=>beginTurn(0));
 }
 function beginTurn(i){
   state.cur=i; state.phase='roll'; state.dice=null; state.quiz=null; state.moves=null; state.chooser=null;
   const p=curP(); state.msg=`${p.name} の手番！サイコロを振ってください`;
+  if(state.month===state.maxMonth) cutin('ui/lastmonth',null,'いよいよ<br>最後の月！',0,true); else if(state.month===state.maxMonth-2) cutin('ui/lastmonth',null,'ラスト<br>3ヶ月！',0,true);
   commit();
 }
 function act(pid,a,v){
@@ -557,7 +596,7 @@ function doStealRoll(p){
   setTimeout(()=>{
     if(ok){ state.phase='stealbuy'; state.msg=`⭕ 奇数！${p.name} は ${ST[s].n} の物件を1件だけ買い取れます`;
       toast(`🎲 ${d}（奇数）成功！<br>${esc(owner.name)} の独占を崩すチャンス`); commit(); }
-    else { toast(`🎲 ${d}（偶数）…独占崩し失敗`); addChat('🎲','#888',`${p.name} の独占崩し（${ST[s].n}）は失敗`); commit(); setTimeout(endTurn,1600); }
+    else { cutin('ui/stealfail',p,`${d}（偶数）…<br>独占崩し失敗`,0,false); toast(`🎲 ${d}（偶数）…独占崩し失敗`); addChat('🎲','#888',`${p.name} の独占崩し（${ST[s].n}）は失敗`); commit(); setTimeout(endTurn,1600); }
   },2600);
 }
 function doStealBuy(p,k){
@@ -617,11 +656,12 @@ function revealQuiz(){
   const p=curP(); { const a=q.answers[p.id]; const ok=!!a&&a.c===q.ans; p.lucky=!ok;
     if(p.rest>0){ p.rest--; state.moves[p.id]={dir:0,left:0,ok,rest:true}; }
     else state.moves[p.id]={dir:ok?1:0,left:ok?d:0,ok};
-    if(ok) okN.push(p.name); }
+    if(ok){ okN.push(p.name); p.correct=(p.correct||0)+1; } }
   state.phase='reveal';
   state.fx={seq:(state.fx?.seq||0)+1,ok:okN.length?[p.id]:[],ng:okN.length?[]:[p.id]};
   state.msg=`正解は「${q.choices[q.ans]}」！ `+(okN.length?`⭕ ${p.name} は${d}マス進む`:`❌ ${p.name} はその場にとどまる`);
   addChat('❓','#888',`${p.name}：正解「${q.choices[q.ans]}」 ${okN.length?'⭕':'❌'}`);
+  if(okN.length) cutin('ui/ok',p,`正解！<br>${d}マス進む`,0,true); else cutin('ui/ng',p,'不正解…<br>その場にとどまる',0,false);
   commit();
   setTimeout(()=>{ state.phase='moving'; commit(); setTimeout(moveTick,300); },2600);
 }
@@ -683,7 +723,7 @@ function afterMove(){
     const m=state.moves[p.id]; if(!m||m.dir===0||p.finished) continue;
     const s=p.pos, mono=monopolist(s), paid={};
     for(const k of pidx(s)){ const o=ownerOf(s,k); if(o && o!==p.id){ paid[o]=(paid[o]||0)+Math.round(ST[s].props[k].price*0.05*(mono===o?2:1)); } }
-    for(const o in paid){ const op=P(o); p.money-=paid[o]; if(op) op.money+=paid[o]; lines.push(PL([p.id,o],`💸 ${p.name}→${op?op.name:'?'} 通行料${yen(paid[o])}`+(mono===o?'（独占2倍）':''))); }
+    for(const o in paid){ const op=P(o); p.money-=paid[o]; if(op) op.money+=paid[o]; cutin('ui/toll',p,`${op?esc(op.name):''}に<br>通行料`,-paid[o],false); lines.push(PL([p.id,o],`💸 ${p.name}→${op?op.name:'?'} 通行料${yen(paid[o])}`+(mono===o?'（独占2倍）':''))); }
   }
   for(const p of state.players){
     const m=state.moves[p.id]; if(!m||m.dir===0) continue; const k=ST[p.pos].ev;
@@ -691,7 +731,7 @@ function afterMove(){
       const ev=(k==='blue'?EV_BLUE:EV_RED)[Math.floor(Math.random()*(k==='blue'?EV_BLUE:EV_RED).length)];
       const ei=(k==='blue'?EV_BLUE:EV_RED).indexOf(ev);
       if(k==='blue'){ p.money+=amt; lines.push(PL([p.id],`🔵 ${p.name}：${ev}！ +${yen(amt)}`)); cutin('b'+ei,p,ev+'！',amt,true,true); }
-      else { p.money-=amt; lines.push(PL([p.id],`🔴 ${p.name}：${ev}… −${yen(amt)}`)); cutin('r'+ei,p,ev+'…',-amt,false,true); }
+      else { p.money-=amt; lines.push(PL([p.id],`🔴 ${p.name}：${ev}… −${yen(amt)}`)); cutin('r'+ei,p,ev+'…',-amt,false,true); p.reds=(p.reds||0)+1; }
       state.evfx={seq:(state.evfx?.seq||0)+1,list:[...(state.evfx?.list||[]).slice(-6)]}; state.evfx.list.push({id:p.id,k,amt}); }
   }
   const r=curP(), rm=state.moves[r.id];
@@ -711,7 +751,7 @@ function afterMove(){
 function doBuy(p,k){
   const s=p.pos, pr=ST[s].props[k];
   if(!pr || ownerOf(s,k) || p.money<pr.price) return;
-  state.owners[pkey(s,k)]=p.id; p.money-=pr.price;
+  state.owners[pkey(s,k)]=p.id; p.money-=pr.price; cutin('ui/buy',p,`${esc(pr.nm)}<br>を購入！`,-pr.price,true);
   if(monopolist(s)===p.id){ cutin('mono',p,`${ST[s].n}を独占！<br>収益・通行料2倍`,0,true); toast(`👑 ${p.name} が ${ST[s].n} を独占！<br>収益・通行料が2倍に`); addChat('👑','#888',`${p.name} が ${ST[s].n} を独占`); }
   commit();
 }
@@ -733,9 +773,11 @@ function doSettle(){
 function endGame(){
   clearTimeout(quizTimer);
   state.phase='end';
-  const rows=state.players.map(p=>({n:p.name,c:p.color,a:assets(p),m:p.money,props:Object.values(state.owners).filter(o=>o===p.id).length,
-    mono:ST.filter(s=>monopolist(s.i)===p.id).length, goal:p.arrivals||0}));
+  const rows=state.players.map(p=>({id:p.id,n:p.name,c:p.color,a:assets(p),m:p.money,props:Object.values(state.owners).filter(o=>o===p.id).length,
+    mono:ST.filter(s=>monopolist(s.i)===p.id).length, goal:p.arrivals||0, ok:p.correct||0, red:p.reds||0}));
   rows.sort((a,b)=>b.a-a.a); state.result=rows;
+  const best=(k,lbl,img,unit)=>{ const m=Math.max(...rows.map(r=>r[k])); if(m<=0) return null; const w=rows.filter(r=>r[k]===m); return {lbl,img,who:w.map(r=>r.n).join('・'),c:w[0].c,v:k==='a'?yen(m):m+unit}; };
+  state.awards=[best('a','💰 大富豪賞','aw_rich',''),best('props','🏢 物件王賞','aw_prop','件'),best('goal','🎯 一番乗り賞','aw_goal','回'),best('ok','🧠 クイズ王賞','aw_quiz','問'),best('red','💸 貧乏神賞','aw_poor','回')].filter(Boolean);
   state.msg=`🏆 ${rows[0].n} の勝利！`; commit();
 }
 // CPU
@@ -839,7 +881,7 @@ function renderLobby(){
   $('lobbyShare').innerHTML = online && isHost ? `<button class="btn brown" id="shareBtn" style="font-size:15px;padding:8px 14px">招待リンクを送る</button>` : '';
   if($('shareBtn')) $('shareBtn').onclick=async()=>{
     try{ if(navigator.share) await navigator.share({title:'ぐらびてぃ電鉄2',text:'一緒に日本縦断しよう！',url:link}); else { await navigator.clipboard.writeText(link); $('lobbyNote').textContent='リンクをコピーしました'; } }catch(e){} };
-  $('lobbyList').innerHTML = state.players.map(p=>`<div class="lp"><span class="dot" style="width:16px;height:16px;border-radius:50%;background:${p.color};border:2px solid #222;display:inline-block"></span>${p.cpu?'🤖':'👤'} ${esc(p.name)}${p.id===myId?'（あなた）':''}${isHost&&p.id!==myId?`<button class="x" data-rm="${p.id}">✕</button>`:''}</div>`).join('')
+  $('lobbyList').innerHTML = state.players.map(p=>`<div class="lp"><img src="${iconOf(p)}" style="width:30px;height:30px;border-radius:50%;border:3px solid ${p.color};vertical-align:middle;margin-right:4px">${p.cpu?'🤖':'👤'} ${esc(p.name)}${p.id===myId?'（あなた）':''}${isHost&&p.id!==myId?`<button class="x" data-rm="${p.id}">✕</button>`:''}</div>`).join('')
     + (state.spect.length?`<div class="sub">観戦: ${state.spect.map(s=>esc(s.name)).join('、')}</div>`:'');
   L.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>removePlayer(b.dataset.rm));
   $('lobbyBtns').innerHTML = (isHost ? `<label class="tgl"><input type="checkbox" id="adultChk" ${state.adult?'checked':''}> 💋 大人ジャンル（出目2）を出題する</label><label class="tgl">📅 プレイ期間 <select id="monthSel">${MONTH_OPTS.map(m=>`<option value="${m}" ${state.maxMonth===m?'selected':''}>${m}ヶ月（${m/12}年）</option>`).join('')}</select></label><button class="btn green" id="addCpuBtn" ${state.players.length>=8?'disabled':''}>CPUを追加</button><button class="btn" id="startBtn">ゲーム開始（${state.players.length}人）</button>` : `<div class="sub">💋 大人ジャンル：${state.adult?'あり':'なし'}／📅 ${state.maxMonth}ヶ月</div>`)
@@ -865,7 +907,7 @@ function render(){
   const head=`<div class="head"><span>📅 ${Math.min(state.month,state.maxMonth)}/${state.maxMonth}ヶ月</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>`;
   if(false) $('plist').innerHTML=head+`<div class="strip">`+state.players.map((p,i)=>`<div class="pc ${i===state.cur&&state.phase!=='end'?'cur':''}"><span class="dot" style="background:${p.color}"></span><span class="nm">${esc(p.name)}</span><b class="${p.money<0?'neg':''}">${yenS(p.money)}</b></div>`).join('')+`</div>`;
   else $('plist').innerHTML=`<div class="head"><span>📅 ${Math.min(state.month,state.maxMonth)}/${state.maxMonth}ヶ月</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>`+
-   state.players.map((p,i)=>`<div class="row ${i===state.cur&&state.phase!=='end'?'cur':''}"><span class="dot" style="background:${p.color}"></span><span class="nm">${p.cpu?"🤖":""}${esc(p.name)}</span>
+   state.players.map((p,i)=>`<div class="row ${i===state.cur&&state.phase!=='end'?'cur':''}"><img class="pic" src="${iconOf(p)}" style="border-color:${p.color}"><span class="nm">${p.cpu?"🤖":""}${esc(p.name)}</span>
    <span>${ST[p.pos].n}</span><span class="left">${state.dest!=null?'(あと'+DD()[p.pos]+')':''}</span>${p.rest?'🌀':''}${p.express?'🎫':''}${p.lucky?'🍀':''}
    <span class="mon ${p.money<0?'neg':''}">${yen(p.money)}</span></div>`).join('')+`<div class="more">タップで閉じる</div>`;
   // 行動ボタン
@@ -883,7 +925,7 @@ function render(){
   if(state.fx && state.fx.seq!==lastFxSeq){ lastFxSeq=state.fx.seq; fxAt=Date.now(); }
   feedCutins(state.cutin);
   if(state.toast && state.toast.seq!==lastToastSeq){ lastToastSeq=state.toast.seq; { const amP=!!P(myId); const vis=(state.toast.items||[]).map(it=>it.t); if(vis.length) showToast(vis.join('<br>')); } }
-  if(state.phase==='end') $('toast').classList.remove('show');
+  if(state.phase==='end'){ $('toast').classList.remove('show'); setTimeout(showResult,cutBusy?1800:300); }
   renderModal(myTurn);
   renderChat();
 }
@@ -967,20 +1009,44 @@ function showRoulette(R){ const el=$('roul'), nm=$('roulName'), sub=$('roulSub')
   spin(); }
 let toastTm=null;
 const CUT_IMG={}; ['arrive','mono','steal','settle','typhoon','express','fest',...[0,1,2,3,4,5,6,7].flatMap(i=>['b'+i,'r'+i])].forEach(k=>{ const im=new Image(); im.src='cuts/'+k+'.webp'; CUT_IMG[k]=im; });
+['ok','ng','buy','stealfail','toll','startband','lastmonth','rank1','rank2','rank3','ranklast','endband','resultbg'].forEach(k=>{ const im=new Image(); im.src='ui/'+k+'.webp'; });
+const ICON_OF=[3,0,1,2,5,4,0,2]; function iconOf(p){ const i=COLORS.indexOf(p.color); return 'ui/icon'+(ICON_OF[i<0?0:i])+'.webp'; }
 let lastCutId=null, cutQ=[], cutBusy=false, toastHold=null;
 function feedCutins(c){ if(lastCutId===null){ lastCutId=c?c.n:0; return; } if(!c) return; c.items.filter(it=>it.id>lastCutId).forEach(it=>cutQ.push(it)); lastCutId=c.n; if(!cutBusy) playCut(); }
 function playCut(){ const el=$('cutin'); const it=cutQ.shift();
   if(!it){ cutBusy=false; el.className='hidden'; if(toastHold){ const h=toastHold; toastHold=null; showToast(h); } return; }
   cutBusy=true; const a=it.amt? (it.amt>0?'+':'−')+yenS(Math.abs(it.amt)) : '';
-  el.innerHTML=`<div class="band"></div><div class="ccard"><img src="cuts/${it.img}.webp" alt=""><div class="txt">${it.who?`<span class="who" style="background:${it.col}">${esc(it.who)}</span>`:''}<div class="ttl">${it.ttl}</div>${a?`<div class="amt">${a}</div>`:''}</div></div>`;
+  el.innerHTML=`<div class="band"></div><div class="ccard"><img src="${it.img.includes('/')?it.img:'cuts/'+it.img}.webp" alt=""><div class="txt">${it.who?`<span class="who" style="background:${it.col}">${esc(it.who)}</span>`:''}<div class="ttl">${it.ttl}</div>${a?`<div class="amt">${a}</div>`:''}</div></div>`;
   el.className=it.good?'good':'bad'; void el.offsetWidth; el.classList.add('on');
   if(!it.good){ const g=$('game'); g.classList.remove('shake'); void g.offsetWidth; g.classList.add('shake'); }
   const dur=cutQ.length>2?1100:1700;
   setTimeout(()=>{ el.classList.add('out'); setTimeout(playCut,330); },dur);
 }
 function showTurnCut(p){ const el=$('turnCut'); const mine=p.id===myId;
-  el.innerHTML=`<div class="tband" style="--pc:${p.color}"><div class="tin"><span class="tsub">${state.month}/${state.maxMonth}ヶ月目</span><span class="tname">${mine?'🚃 あなたの番！':'🚃 '+esc(p.name)+' の番'}</span></div></div>`;
+  el.innerHTML=`<div class="tband" style="--pc:${p.color}"><div class="tin"><span class="tsub">${state.month}/${state.maxMonth}ヶ月目</span><span class="tname">${mine?'あなたの番！':esc(p.name)+' の番'}</span></div></div>`; el.querySelector('.tin').insertAdjacentHTML('afterbegin',`<img class="ticon" src="${iconOf(p)}">`);
   el.className=''; void el.offsetWidth; el.classList.add('on'); clearTimeout(el._tm); el._tm=setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.className='hidden',400); },1400); }
+let resultShown=false, resTm=[];
+function showResult(){
+  if(resultShown||!state.result) return; resultShown=true; const R=$('result'); R.className=''; $('chat').classList.add('hidden'); $('modal').classList.add('hidden');
+  const rows=state.result, n=rows.length; resTm.forEach(clearTimeout); resTm=[];
+  const later=(ms,f)=>resTm.push(setTimeout(f,ms));
+  const rkImg=i=>i===0?'rank1':i===1?'rank2':i===2&&n>3?'rank3':i===n-1?'ranklast':(i===2?'rank3':null);
+  const pOf=r=>state.players.find(p=>p.id===r.id)||{color:r.c,name:r.n};
+  const conf=()=>{ for(let k=0;k<60;k++){ const c=document.createElement('div'); c.className='conf'; c.style.left=Math.random()*100+'vw'; c.style.background=['#ffd84a','#e8402f','#2f7de8','#2fb34a','#fff','#e04d9b'][k%6]; c.style.animationDuration=(2+Math.random()*2.5)+'s'; c.style.animationDelay=Math.random()*1.2+'s'; R.appendChild(c); } };
+  const final=()=>{ resTm.forEach(clearTimeout); R.onclick=null;
+    R.innerHTML=`<div class="final"><h2>🏆 最終結果</h2>`+rows.map((r,i)=>{ const im=rkImg(i);
+      return `<div class="row ${i?'':'first'}">${im?`<img class="th" src="ui/${im}.webp">`:`<span class="no">${i+1}</span>`}<img class="ic" src="${iconOf(pOf(r))}" style="border-color:${r.c}"><div><div class="nm">${i+1}位 ${esc(r.n)}</div><div class="st">目的地${r.goal}回・物件${r.props}件・独占${r.mono}・正解${r.ok||0}問</div></div><span class="v">${yen(r.a)}</span></div>`; }).join('')+
+      `<div class="aw">`+(state.awards||[]).map(a=>`<div class="awc"><img src="ui/${a.img}.webp"><div><b>${a.lbl}</b><span style="color:${a.c};font-weight:bold">${esc(a.who)}</span><br><span>${a.v}</span></div></div>`).join('')+`</div>`+
+      `<div class="stack" style="width:min(96vw,460px);margin-top:16px"><button class="btn" onclick="location.href=location.pathname">タイトルへ</button></div></div>`;
+    conf(); };
+  R.onclick=final;
+  R.innerHTML=`<div class="stage"><div class="endwrap"><img class="endimg" src="ui/endband.webp"><div class="endtxt">ゲーム終了！</div></div><div class="rknm" style="background:#2b2420;margin-top:14px">おつかれさまでした</div></div><div class="skip">タップでスキップ ▶</div>`;
+  let t=2600;
+  for(let i=n-1;i>=0;i--){ const r=rows[i], im=rkImg(i);
+    later(t,()=>{ R.innerHTML=`<div class="stage">${im?`<img class="rkimg" src="ui/${im}.webp">`:''}<div class="rkno">第${i+1}位</div><div class="rknm" style="background:${r.c}">${esc(r.n)}</div><div class="rkas">${yen(r.a)}</div></div><div class="skip">タップでスキップ ▶</div>`; if(i===0) conf(); });
+    t+= i===0?3200:1800; }
+  later(t,final);
+}
 function showToast(html){ if(cutBusy){ toastHold=html; return; } const t=$('toast'); t.innerHTML=html; t.classList.add('show'); clearTimeout(toastTm); toastTm=setTimeout(()=>t.classList.remove('show'),2300); }
 
 function renderModal(myTurn){
@@ -1025,8 +1091,8 @@ function renderModal(myTurn){
        : (mine?`<div class="stack"><button class="btn gray" data-endbuy="1">買い取らずに終える</button></div>`:`<div class="sub">${esc(p.name)} がどれを買い取るか検討中…</div>`));
   } else if(state.phase==='settle' && state.settle){
     center=true; const s=state.settle;
-    html=`<h2>📊 ${s.month}ヶ月目 決算</h2>`+s.rows.map(r=>`<div class="rk"><span class="dot" style="width:14px;height:14px;border-radius:50%;background:${r.c};border:2px solid #222"></span>${esc(r.n)}<span class="v">+${yen(r.inc)}</span></div>`).join('');
-  } else if(state.phase==='end' && state.result){
+    html=`<div class="mhero" style="background-image:url(ui/settlebg.webp)"><span>📊 ${s.month}ヶ月目 決算</span></div>`+s.rows.map(r=>{ const pp=state.players.find(x=>x.name===r.n); return `<div class="rk"><img class="rkic" src="${pp?iconOf(pp):'ui/icon0.webp'}" style="border-color:${r.c}">${esc(r.n)}<span class="v">+${yen(r.inc)}</span></div>`; }).join('');
+  } else if(state.phase==='end' && state.result && false){
     center=true;
     html=`<h2>🏆 最終結果</h2>`+state.result.map((r,i)=>`<div class="rk"><span class="no">${['🥇','🥈','🥉'][i]||(i+1)}</span><div><div>${esc(r.n)}</div><div class="sub" style="text-align:left;margin:0">目的地${r.goal}回・物件${r.props}・独占${r.mono}</div></div><span class="v">${yen(r.a)}</span></div>`).join('')+
       `<div class="stack"><button class="btn" onclick="location.href=location.pathname">タイトルへ</button></div>`;
