@@ -479,8 +479,8 @@ function commit(){
   render();
   if(isHost){ const msg={t:'state',s:state}; conns.forEach(c=>{try{c.open&&c.send(msg);}catch(e){}}); cpuCheck(); }
 }
-function toast(text){ state.toast={seq:(state.toast?.seq||0)+1,text}; }
-function cutin(img,p,ttl,amt,good){ const c=state.cutin||{n:0,items:[]}; c.n++; c.items=[...c.items.slice(-7),{id:c.n,img,who:p?p.name:'',col:p?p.color:'#888',ttl,amt:amt||0,good:!!good}]; state.cutin=c; }
+function toast(text,to){ state.toast={seq:(state.toast?.seq||0)+1,items:Array.isArray(text)?text:[{t:text,to:to||null}]}; }
+function cutin(img,p,ttl,amt,good,priv){ const c=state.cutin||{n:0,items:[]}; c.n++; c.items=[...c.items.slice(-7),{id:c.n,pid:priv&&p?p.id:null,img,who:p?p.name:'',col:p?p.color:'#888',ttl,amt:amt||0,good:!!good}]; state.cutin=c; }
 function addChat(n,c,t){ state.chat.push({n,c,t}); if(state.chat.length>40) state.chat.shift(); }
 
 function addPlayer(id,name,cpu){
@@ -657,30 +657,31 @@ function doRoulette(next){
   setTimeout(()=>{ state.destFrom=from; state.dest=pick.i; state.tripLen=dd[pick.i]; state.pendingRoulette=false;
     state.msg=`🎯 次の目的地は「${pick.n}」！`; addChat('🎯','#888',`次の目的地は ${pick.n}（${state.tripLen}マス先）`); commit(); setTimeout(next,1600); },3600);
 }
+function PL(to,t){ return {t,to}; }
 function afterMove(){
   const lines=[];
   for(const p of state.players){
     const m=state.moves[p.id]; if(!m||m.dir===0||p.finished) continue;
     const s=p.pos, mono=monopolist(s), paid={};
     for(const k of pidx(s)){ const o=ownerOf(s,k); if(o && o!==p.id){ paid[o]=(paid[o]||0)+Math.round(ST[s].props[k].price*0.05*(mono===o?2:1)); } }
-    for(const o in paid){ const op=P(o); p.money-=paid[o]; if(op) op.money+=paid[o]; lines.push(`💸 ${p.name}→${op?op.name:'?'} 通行料${yen(paid[o])}`+(mono===o?'（独占2倍）':'')); }
+    for(const o in paid){ const op=P(o); p.money-=paid[o]; if(op) op.money+=paid[o]; lines.push(PL([p.id,o],`💸 ${p.name}→${op?op.name:'?'} 通行料${yen(paid[o])}`+(mono===o?'（独占2倍）':''))); }
   }
   for(const p of state.players){
     const m=state.moves[p.id]; if(!m||m.dir===0) continue; const k=ST[p.pos].ev;
     if(k==='blue'||k==='red'){ const amt=Math.round((3+Math.floor(Math.random()*18))*100*(1+state.month/30)/100)*100;
       const ev=(k==='blue'?EV_BLUE:EV_RED)[Math.floor(Math.random()*(k==='blue'?EV_BLUE:EV_RED).length)];
       const ei=(k==='blue'?EV_BLUE:EV_RED).indexOf(ev);
-      if(k==='blue'){ p.money+=amt; lines.push(`🔵 ${p.name}：${ev}！ +${yen(amt)}`); cutin('b'+ei,p,ev+'！',amt,true); }
-      else { p.money-=amt; lines.push(`🔴 ${p.name}：${ev}…`+` −${yen(amt)}`); cutin('r'+ei,p,ev+'…',-amt,false); }
+      if(k==='blue'){ p.money+=amt; lines.push(PL([p.id],`🔵 ${p.name}：${ev}！ +${yen(amt)}`)); cutin('b'+ei,p,ev+'！',amt,true,true); }
+      else { p.money-=amt; lines.push(PL([p.id],`🔴 ${p.name}：${ev}… −${yen(amt)}`)); cutin('r'+ei,p,ev+'…',-amt,false,true); }
       state.evfx={seq:(state.evfx?.seq||0)+1,list:[...(state.evfx?.list||[]).slice(-6)]}; state.evfx.list.push({id:p.id,k,amt}); }
   }
   const r=curP(), rm=state.moves[r.id];
   if(!r.finished){ const x=Math.random();
-    if(x<0.10){ r.express=true; lines.push(`🎫 ${r.name} 特急券ゲット！次の手番はサイコロ2個`); cutin('express',r,'特急券ゲット！<br>次はサイコロ2個',0,true); }
-    else if(x<0.16){ r.rest=1; lines.push(`🌀 ${r.name} 台風接近！次の移動はお休み`); cutin('typhoon',r,'台風接近！<br>次の移動はお休み',0,false); }
-    else if(x<0.26 && ST[r.pos].kind==='st'){ const b=(5+Math.floor(Math.random()*16))*100; r.money+=b; lines.push(`🎉 ${r.name} ${ST[r.pos].n}のご当地祭りで${yen(b)}の臨時収入`); cutin('fest',r,`${ST[r.pos].n}の<br>ご当地祭り！`,b,true); }
+    if(x<0.10){ r.express=true; lines.push(PL([r.id],`🎫 ${r.name} 特急券ゲット！次の手番はサイコロ2個`)); cutin('express',r,'特急券ゲット！<br>次はサイコロ2個',0,true,true); }
+    else if(x<0.16){ r.rest=1; lines.push(PL([r.id],`🌀 ${r.name} 台風接近！次の移動はお休み`)); cutin('typhoon',r,'台風接近！<br>次の移動はお休み',0,false,true); }
+    else if(x<0.26 && ST[r.pos].kind==='st'){ const b=(5+Math.floor(Math.random()*16))*100; r.money+=b; lines.push(PL([r.id],`🎉 ${r.name} ${ST[r.pos].n}のご当地祭りで${yen(b)}の臨時収入`)); cutin('fest',r,`${ST[r.pos].n}の<br>ご当地祭り！`,b,true,true); }
   }
-  if(lines.length){ toast(lines.join('<br>')); lines.forEach(l=>addChat('📢','#888',strip(l))); }
+  if(lines.length){ toast(lines); lines.forEach(l=>addChat('📢','#888',strip(l.t))); }
   state.moves=null;
   const canBuy = rm && rm.ok && ST[r.pos].props.length>0 && pidx(r.pos).some(k=>!ownerOf(r.pos,k));
   const mo = rm && rm.ok && ST[r.pos].props.length>0 ? monopolist(r.pos) : null;
@@ -858,7 +859,7 @@ function render(){
   if(state.roulette && state.roulette.seq!==lastRoulSeq){ lastRoulSeq=state.roulette.seq; showRoulette(state.roulette); }
   if(state.fx && state.fx.seq!==lastFxSeq){ lastFxSeq=state.fx.seq; fxAt=Date.now(); }
   feedCutins(state.cutin);
-  if(state.toast && state.toast.seq!==lastToastSeq){ lastToastSeq=state.toast.seq; showToast(state.toast.text); }
+  if(state.toast && state.toast.seq!==lastToastSeq){ lastToastSeq=state.toast.seq; { const amP=!!P(myId); const vis=(state.toast.items||[]).filter(it=>!it.to||!amP||it.to.includes(myId)).map(it=>it.t); if(vis.length) showToast(vis.join('<br>')); } }
   if(state.phase==='end') $('toast').classList.remove('show');
   renderModal(myTurn);
   renderChat();
@@ -944,7 +945,7 @@ function showRoulette(R){ const el=$('roul'), nm=$('roulName'), sub=$('roulSub')
 let toastTm=null;
 const CUT_IMG={}; ['arrive','mono','steal','settle','typhoon','express','fest',...[0,1,2,3,4,5,6,7].flatMap(i=>['b'+i,'r'+i])].forEach(k=>{ const im=new Image(); im.src='cuts/'+k+'.webp'; CUT_IMG[k]=im; });
 let lastCutId=null, cutQ=[], cutBusy=false, toastHold=null;
-function feedCutins(c){ if(lastCutId===null){ lastCutId=c?c.n:0; return; } if(!c) return; c.items.filter(it=>it.id>lastCutId).forEach(it=>cutQ.push(it)); lastCutId=c.n; if(!cutBusy) playCut(); }
+function feedCutins(c){ if(lastCutId===null){ lastCutId=c?c.n:0; return; } if(!c) return; c.items.filter(it=>it.id>lastCutId && (!it.pid || !P(myId) || it.pid===myId)).forEach(it=>cutQ.push(it)); lastCutId=c.n; if(!cutBusy) playCut(); }
 function playCut(){ const el=$('cutin'); const it=cutQ.shift();
   if(!it){ cutBusy=false; el.className='hidden'; if(toastHold){ const h=toastHold; toastHold=null; showToast(h); } return; }
   cutBusy=true; const a=it.amt? (it.amt>0?'+':'−')+yenS(Math.abs(it.amt)) : '';
