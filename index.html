@@ -217,6 +217,12 @@ button{font-family:inherit;cursor:pointer;border:0}
 #chat.min #chatBody,#chat.min #chatForm{display:none}
 .sndt{background:#fff;border:2px solid #cba;border-radius:999px;padding:4px 12px;font-size:13px;margin:4px 0;color:#555}
 .screen .hero{display:block;width:calc(100% + 28px);margin:-14px -14px 8px;height:150px;object-fit:cover;border-radius:16px 16px 0 0}
+#intro{position:fixed;inset:0;z-index:100;background:#0b1a2e;display:flex;align-items:center;justify-content:center;transition:opacity .5s}
+#intro.fade{opacity:0;pointer-events:none}
+#intro video{width:100%;height:100%;object-fit:contain;background:#0b1a2e}
+#introSkip{position:absolute;right:14px;bottom:calc(18px + env(safe-area-inset-bottom));background:rgba(0,0,0,.55);color:#fff;border:2px solid rgba(255,255,255,.8);border-radius:999px;padding:7px 16px;font-size:14px;font-weight:bold}
+#introTap{position:absolute;left:50%;bottom:22%;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;font-size:20px;font-weight:bold;padding:12px 26px;border-radius:999px;animation:itap 1s ease-in-out infinite alternate}
+@keyframes itap{to{transform:translateX(-50%) scale(1.06)}}
 .screen{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:16px;background:linear-gradient(#5ab3e8,#2a6fb0)}
 .screen .card{max-width:420px;text-align:center;max-height:92vh}
 .logo{font-size:30px;color:var(--or);line-height:1.15;margin:4px 0 2px;text-shadow:2px 2px 0 #fff3d6}
@@ -273,6 +279,7 @@ button{font-family:inherit;cursor:pointer;border:0}
 <div id="gconf" class="hidden"><div class="gcb"><div class="gct"></div><button class="btn gok">OK</button><button class="btn gray gng">キャンセル</button></div></div>
 <div id="modal" class="hidden"><div class="card" id="mcard"></div></div>
 
+<div id="intro"><video id="introV" muted playsinline webkit-playsinline preload="auto"><source src="intro.mp4" type="video/mp4"><source src="intro.webm" type="video/webm"></video><button id="introSkip">スキップ ▶</button><div id="introTap" class="hidden">タップしてスタート</div></div>
 <div id="title" class="screen">
   <div class="card">
     <img class="hero" src="ui/title.webp" alt="">
@@ -1136,6 +1143,15 @@ function resumeHost(d){ isHost=true; myId='g_'+MY_TOK; state=d.state; roomCode=d
   const i=state.cur; if(state.pendingRoulette) doRoulette(()=>beginTurn(i)); else beginTurn(i); }
 
 // ===================== 画面（タイトル・待機室） =====================
+// ---- オープニング動画 → タイトル画面 ----
+(()=>{ const I=$('intro'), V=$('introV'); let done=false;
+  const end=()=>{ if(done) return; done=true; try{V.pause();}catch(e){} I.classList.add('fade'); setTimeout(()=>I.remove(),550); };
+  $('introSkip').onclick=e=>{ e.stopPropagation(); end(); };
+  V.addEventListener('ended',end); const srcs=V.querySelectorAll('source'); srcs[srcs.length-1].addEventListener('error',end);
+  const tryPlay=()=>{ const pr=V.play(); if(pr&&pr.catch) pr.catch(()=>{ $('introTap').classList.remove('hidden'); I.onclick=()=>{ $('introTap').classList.add('hidden'); I.onclick=null; V.play().catch(end); }; }); };
+  tryPlay(); setTimeout(()=>{ if(!done && V.currentTime===0 && $('introTap').classList.contains('hidden')) end(); },6000); // 読み込めない時は先へ
+  setTimeout(end,25000);
+})();
 $('nameIn').value=myName;
 loadQuestions();
 $('qfile').onchange=async e=>{ for(const f of e.target.files){ try{ addQuestions(JSON.parse(await f.text()),f.name); }catch(err){ qLoadInfo.files.push(f.name+'(形式エラー)'); qLoadInfo.bad++; } } showQInfo(); };
