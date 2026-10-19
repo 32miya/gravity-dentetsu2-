@@ -215,6 +215,14 @@ button{font-family:inherit;cursor:pointer;border:0}
 #chatForm input{flex:1;border:0;padding:10px;font-size:16px;font-family:inherit;min-width:0}
 #chatForm button{background:#1a7ef0;color:#fff;padding:0 16px;font-size:16px}
 #chat.min #chatBody,#chat.min #chatForm{display:none}
+.gbx{background:linear-gradient(#fff6c8,#ffe27a);border:3px solid #e0a000;border-radius:18px;padding:10px 12px;margin:10px 0 6px;box-shadow:0 4px 0 rgba(0,0,0,.15)}
+.gbt{font-weight:bold;font-size:16px;color:#7a4a00}
+.gbr{display:flex;align-items:center;justify-content:center;gap:14px;margin:4px 0}
+.gb{width:54px;height:54px;border-radius:50%;background:var(--or);color:#fff;font-size:32px;font-weight:bold;line-height:1;box-shadow:0 4px 0 var(--or2);animation:gbp 1.4s ease-in-out infinite}
+.gb:active{transform:translateY(3px);box-shadow:0 1px 0 var(--or2)}
+@keyframes gbp{50%{box-shadow:0 4px 0 var(--or2),0 0 0 6px rgba(255,140,0,.25)}}
+.gbn{display:flex;align-items:baseline;gap:4px;min-width:90px;justify-content:center}.gbn b{font-size:44px;color:#c4561a;line-height:1}.gbn span{font-size:16px;font-weight:bold;color:#7a4a00}
+.gbs{font-size:12px;color:#7a5a20}
 .sndt{background:#fff;border:2px solid #cba;border-radius:999px;padding:4px 12px;font-size:13px;margin:4px 0;color:#555}
 .screen .hero{display:block;width:calc(100% + 28px);margin:-14px -14px 8px;height:150px;object-fit:cover;border-radius:16px 16px 0 0}
 #intro{position:fixed;inset:0;z-index:100;background:#0b1a2e;display:flex;align-items:center;justify-content:center;transition:opacity .5s}
@@ -304,6 +312,7 @@ button{font-family:inherit;cursor:pointer;border:0}
   <div class="card">
     <img class="hero" src="ui/lobbybg.webp" alt="">
     <h2 style="color:var(--br);margin:0">待機室</h2>
+    <div id="goalBox"></div>
     <div id="lobbyCode"></div>
     <div id="lobbyShare" class="joinrow" style="justify-content:center;margin:6px 0"></div>
     <div id="lobbyList" style="margin:8px 0"></div>
@@ -1182,9 +1191,11 @@ function renderLobby(){
   $('lobbyList').innerHTML = state.players.map(p=>`<div class="lp"><img src="${iconOf(p)}" style="width:30px;height:30px;border-radius:50%;border:3px solid ${p.color};vertical-align:middle;margin-right:4px">${p.cpu?'🤖':'👤'} ${esc(p.name)}${p.id===myId?'（あなた）':''}${isHost&&p.id!==myId?`<button class="x" data-rm="${p.id}">✕</button>`:''}</div>`).join('')
     + (state.spect.length?`<div class="sub">観戦: ${state.spect.map(s=>esc(s.name)).join('、')}</div>`:'');
   L.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>removePlayer(b.dataset.rm));
-  $('lobbyBtns').innerHTML = (isHost ? `<label class="tgl"><input type="checkbox" id="adultChk" ${state.adult?'checked':''}> 💋 大人ジャンル（出目2）を出題する</label><label class="tgl">🏁 ゲームの長さ：目的地 <input type="number" id="goalIn" min="1" max="30" value="${state.goalN}" style="width:60px;font-size:16px;text-align:center"> か所</label><button class="btn green" id="addCpuBtn" ${state.players.length>=8?'disabled':''}>CPUを追加</button><button class="btn" id="startBtn">ゲーム開始（${state.players.length}人）</button>` : `<div class="sub">💋 大人ジャンル：${state.adult?'あり':'なし'}／🏁 目的地${state.goalN}か所</div>`)
+  $('goalBox').innerHTML=`<div class="gbx"><div class="gbt">🏁 ゲームの長さ</div><div class="gbr">${isHost?'<button class="gb" data-gl="-1">−</button>':''}<div class="gbn"><b>${state.goalN}</b><span>か所</span></div>${isHost?'<button class="gb" data-gl="1">＋</button>':''}</div>
+    <div class="gbs">目的地に ${state.goalN}回 たどり着いたらゲーム終了（目安 約${state.goalN*8}〜${state.goalN*12}分）${isHost?'<br>👆 −／＋ で変更できます':''}</div></div>`;
+  $('lobbyBtns').innerHTML = (isHost ? `<label class="tgl"><input type="checkbox" id="adultChk" ${state.adult?'checked':''}> 💋 大人ジャンル（出目2）を出題する</label><button class="btn green" id="addCpuBtn" ${state.players.length>=8?'disabled':''}>CPUを追加</button><button class="btn" id="startBtn">ゲーム開始（${state.players.length}人）</button>` : `<div class="sub">💋 大人ジャンル：${state.adult?'あり':'なし'}／🏁 目的地${state.goalN}か所</div>`)
     + `<div class="sub">📚 問題 ${isHost?QPOOL.length+'問':'ホストの問題を使用'}</div>`;
-  if(isHost){ $('addCpuBtn').onclick=addCpu; $('startBtn').onclick=startGame; $('adultChk').onchange=e=>{ state.adult=e.target.checked; commit(); }; $('goalIn').onchange=e=>{ state.goalN=Math.max(1,Math.min(30,(+e.target.value)|0||3)); commit(); }; }
+  if(isHost){ $('addCpuBtn').onclick=addCpu; $('startBtn').onclick=startGame; $('adultChk').onchange=e=>{ state.adult=e.target.checked; commit(); }; $('goalBox').querySelectorAll('[data-gl]').forEach(b=>b.onclick=()=>{ state.goalN=Math.max(1,Math.min(30,state.goalN+(+b.dataset.gl))); commit(); }); }
   $('lobbyNote').textContent = isHost ? (online?'コードかリンクを友だちに送ってください':'') : 'ホストがゲームを開始するのを待っています…';
 }
 
