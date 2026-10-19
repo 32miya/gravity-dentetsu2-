@@ -62,6 +62,11 @@ button{font-family:inherit;cursor:pointer;border:0}
 #myMoney .dl{position:absolute;left:100%;margin-left:6px;font-size:16px;font-weight:bold;white-space:nowrap;text-shadow:0 0 3px #fff,0 0 3px #fff;animation:mdl 1.6s ease-out forwards}
 #myMoney .dl.p{color:#d08a00}#myMoney .dl.m{color:#d02020}
 @keyframes mdl{0%{transform:translateY(6px);opacity:0}15%{transform:translateY(0);opacity:1}80%{opacity:1}100%{transform:translateY(-14px);opacity:0}}
+#ticker{position:fixed;left:0;right:0;top:calc(80px + env(safe-area-inset-top));z-index:7;height:30px;background:linear-gradient(90deg,rgba(30,26,24,0),rgba(30,26,24,.85) 8%,rgba(30,26,24,.85) 92%,rgba(30,26,24,0));overflow:hidden;pointer-events:none}
+#ticker .tk{position:absolute;top:0;left:0;height:30px;line-height:30px;white-space:nowrap;color:#fff;font-weight:bold;font-size:15px;transform:translateX(100vw)}
+#ticker .tk.run{animation:tkr 7s linear forwards}
+#ticker .tk b{padding:1px 8px;border-radius:8px;margin:0 2px}#ticker .tk .pz{color:#ffd84a}
+@keyframes tkr{to{transform:translateX(-100%)}}
 #roomTag{position:fixed;left:8px;top:calc(76px + env(safe-area-inset-top));z-index:5;background:rgba(30,26,24,.85);color:#fff;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:bold;cursor:pointer}
 #gconf{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center}
 #gconf .gcb{background:var(--paper,#fff8e1);border:4px solid #2b2420;border-radius:20px;padding:20px 18px;width:min(86vw,340px);display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 0 rgba(0,0,0,.3)}
@@ -200,6 +205,10 @@ button{font-family:inherit;cursor:pointer;border:0}
 .prop .btn{font-size:13px;padding:6px 10px;border-radius:10px;box-shadow:0 3px 0 var(--or2)}
 .owner{font-size:13px;padding:2px 6px;border-radius:6px;color:#fff}
 .sub{font-size:13px;color:#666;text-align:center;margin:6px 0}
+.stb{width:100%;border-collapse:collapse;font-size:13px}.stb th{font-size:11px;color:#888;font-weight:normal;padding:2px;text-align:right}.stb th:nth-child(2){text-align:left}
+.stb td{padding:6px 3px;border-bottom:1px solid #e5dccb;text-align:right;white-space:nowrap}.stb td.no{font-size:18px;text-align:center;width:1.6em}
+.stb td.nm{text-align:left;display:flex;align-items:center;gap:4px;max-width:7.5em;overflow:hidden}.stb td.nm span{overflow:hidden;text-overflow:ellipsis}
+.stb td.inc{color:#d08a00;font-weight:bold}.stb td.tot{font-weight:bold;font-size:15px}.stb td.neg{color:#d02020}.stb tr.top{background:#fff3c4}
 .rk{display:flex;gap:8px;align-items:center;padding:6px 4px;border-bottom:1px solid #ddd;font-size:16px}
 .rk .no{width:2em;font-size:20px;text-align:center}
 .rk .v{margin-left:auto;font-weight:bold}
@@ -259,6 +268,7 @@ button{font-family:inherit;cursor:pointer;border:0}
   <div id="destTag"></div>
   <div id="myMoney" class="hidden"></div>
   <div id="roomTag" class="hidden"></div>
+  <div id="ticker" class="hidden"><div class="tk"></div></div>
   <div id="chHint" class="hidden"></div>
   <div id="tools">
     <button id="followBtn" title="現在地へ">📍</button>
@@ -800,7 +810,7 @@ function revealQuiz(){
   if(okN.length) cutin('ui/ok',p,`正解！<br>${d}マス進む`,0,true); else cutin('ui/ng',p,'不正解…<br>その場にとどまる',0,false);
   const prize=SIDE_PRIZE*q.lv; q.side=[];
   active().forEach(x=>{ if(x===p) return; const a=q.answers[x.id]; if(a&&a.c===q.ans){ x.money+=prize; x.sideOk=(x.sideOk||0)+1; q.side.push(x.name); } });
-  q.prize=prize; if(q.side.length) addChat('🤫','#888',`こっそり正解：${q.side.join('・')}（各+${yen(prize)}）`);
+  q.prize=prize; if(q.side.length){ const ws=active().filter(x=>q.side.includes(x.name)); state.sideNote={seq:(state.sideNote?.seq||0)+1,prize,items:ws.map(x=>({n:x.name,c:x.color}))}; }
   commit();
   setTimeout(()=>{ state.phase='moving'; commit(); setTimeout(moveTick,300); },2600);
 }
@@ -928,11 +938,11 @@ function endTurn(){
   // 全員が1周したら1ヶ月進む
   let settled=false; if(i<=state.cur){ state.month++; if(state.month%SETTLE_EVERY===0){ doSettle(); settled=true; } }
   const go=()=>{ if(state.pendingRoulette) doRoulette(()=>beginTurn(i)); else beginTurn(i); };
-  if(settled){ state.phase='settle'; commit(); setTimeout(go,3000); }
+  if(settled){ state.phase='settle'; commit(); setTimeout(go,6500); }
   else go();
 }
 function doSettle(){
-  const rows=state.players.map(p=>{ const inc=income(p); p.money+=inc; return {n:p.name,c:p.color,inc}; });
+  const rows=state.players.map(p=>{ const inc=income(p); p.money+=inc; return {id:p.id,n:p.name,c:p.color,inc,m:p.money,a:assets(p)}; }).sort((a,b)=>b.a-a.a);
   state.settle={seq:(state.settle?.seq||0)+1,month:state.month,rows}; cutin('settle',null,`${state.month}ヶ月目の決算！`,0,true);
   state.msg=`📊 ${state.month}ヶ月目の決算！`;
 }
@@ -1200,7 +1210,7 @@ function renderLobby(){
 }
 
 // ===================== ゲームHUD描画 =====================
-let cardPick=null, lastHostNote=null, lastQuizSnd=null, lastPosSig=null, lastChatSnd=null;
+let cardPick=null, lastSideNote=null, lastHostNote=null, lastQuizSnd=null, lastPosSig=null, lastChatSnd=null;
 let lastDiceSeq=0, lastToastSeq=0, lastSettleSeq=0, lastCur=-1, lastPhase='', listMini=false;
 function render(){
   if(!state) return;
@@ -1251,6 +1261,10 @@ function render(){
   if(state.quiz && state.quiz.id!==lastQuizSnd && state.phase==='quiz'){ lastQuizSnd=state.quiz.id; SFX.play('quiz'); }
   { const sig=state.players.map(p=>p.pos).join(','); if(lastPosSig!==null && sig!==lastPosSig && (state.phase==='moving'||state.phase==='choice')) SFX.play('step'); lastPosSig=sig; }
   { const L=state.chat[state.chat.length-1]; const k=(state.chatN||0); if(lastChatSnd!==null && k!==lastChatSnd && L && L.u) SFX.play('pop'); lastChatSnd=k; }
+  if(lastSideNote===null) lastSideNote=state.sideNote?state.sideNote.seq:0;
+  if(state.sideNote && state.sideNote.seq!==lastSideNote){ lastSideNote=state.sideNote.seq; const T=$('ticker'), K=T.querySelector('.tk'); const sn=state.sideNote;
+    K.innerHTML=`🤫 こっそり正解！　`+sn.items.map(it=>`<b style="background:${it.c}">${esc(it.n)}</b>`).join(' ')+`　<span class="pz">各 +${yen(sn.prize)} ゲット！</span>`;
+    T.classList.remove('hidden'); K.classList.remove('run'); void K.offsetWidth; K.classList.add('run'); clearTimeout(T._tm); T._tm=setTimeout(()=>T.classList.add('hidden'),7200); SFX.play('coin'); }
   feedCutins(state.cutin);
   if(state.toast && state.toast.seq!==lastToastSeq){ lastToastSeq=state.toast.seq; { const amP=!!P(myId); const vis=(state.toast.items||[]).map(it=>it.t); if(vis.length) showToast(vis.join('<br>')); } }
   if(state.phase==='end'){ $('toast').classList.remove('show'); setTimeout(showResult,cutBusy?1800:300); }
@@ -1513,7 +1527,9 @@ function renderModal(myTurn){
        : (mine?`<div class="stack"><button class="btn gray" data-endbuy="1">買い取らずに終える</button></div>`:`<div class="sub">${esc(p.name)} がどれを買い取るか検討中…</div>`));
   } else if(state.phase==='settle' && state.settle){
     center=true; const s=state.settle;
-    html=`<div class="mhero" style="background-image:url(ui/settlebg.webp)"><span>📊 ${s.month}ヶ月目 決算</span></div>`+s.rows.map(r=>{ const pp=state.players.find(x=>x.name===r.n); return `<div class="rk"><img class="rkic" src="${pp?iconOf(pp):'ui/icon0.webp'}" style="border-color:${r.c}">${esc(r.n)}<span class="v">+${yen(r.inc)}</span></div>`; }).join('');
+    html=`<div class="mhero" style="background-image:url(ui/settlebg.webp)"><span>📊 ${s.month}ヶ月目 決算</span></div>
+      <table class="stb"><thead><tr><th></th><th>名前</th><th>収支</th><th>所持金</th><th>総資産</th></tr></thead><tbody>`+s.rows.map((r,i)=>{ const pp=state.players.find(x=>x.id===r.id)||state.players.find(x=>x.name===r.n);
+        return `<tr class="${i?'':'top'}"><td class="no">${['🥇','🥈','🥉'][i]||(i+1)}</td><td class="nm"><img class="rkic" src="${pp?iconOf(pp):'ui/icon0.webp'}" style="border-color:${r.c}"><span>${esc(r.n)}</span></td><td class="inc">+${yenS(r.inc)}</td><td class="${(r.m??0)<0?'neg':''}">${r.m!=null?yenS(r.m):'-'}</td><td class="tot">${r.a!=null?yenS(r.a):'-'}</td></tr>`; }).join('')+`</tbody></table><div class="sub">総資産＝所持金＋持っている物件の価格</div>`;
   } else if(state.phase==='end' && state.result && false){
     center=true;
     html=`<h2>🏆 最終結果</h2>`+state.result.map((r,i)=>`<div class="rk"><span class="no">${['🥇','🥈','🥉'][i]||(i+1)}</span><div><div>${esc(r.n)}</div><div class="sub" style="text-align:left;margin:0">目的地${r.goal}回・物件${r.props}・独占${r.mono}</div></div><span class="v">${yen(r.a)}</span></div>`).join('')+
@@ -1792,7 +1808,11 @@ function frame(now){
     const ps=group?state.players.filter(p=>!p.finished&&disp[p.id]):[];
     if(ps.length>1){ let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; ps.forEach(p=>{const d=disp[p.id]; x0=Math.min(x0,d.x);x1=Math.max(x1,d.x);y0=Math.min(y0,d.y);y1=Math.max(y1,d.y);});
       cam.tx=(x0+x1)/2; cam.ty=(y0+y1)/2+60; cam.tz=Math.max(0.3,Math.min(1.4,Math.min(innerWidth/(x1-x0+220),innerHeight*0.45/(y1-y0+160)))); }
-    else if(!myChoice){ const p=curP(); const dp=p&&disp[p.id]; if(dp){ cam.tx=dp.x; cam.ty=dp.y+30/cam.z; } }
+    else if(!myChoice){ const p=curP(); const dp=p&&disp[p.id]; if(dp){ cam.tx=dp.x;
+      // 下にウィンドウが出ている時は、その上の空きスペースの中央に手番の電車が来るようにずらす
+      const M=$('modal'), C=$('mcard'); let goalY=innerHeight/2-30;
+      if(M && !M.classList.contains('hidden') && !M.classList.contains('center') && C){ const top=C.getBoundingClientRect().top; if(top>80) goalY=Math.max(70,(top+40)/2); }
+      cam.ty=dp.y+(innerHeight/2-goalY)/cam.z; } }
   }
   cam.x+=(cam.tx-cam.x)*0.12; cam.y+=(cam.ty-cam.y)*0.12; cam.z+=(cam.tz-cam.z)*0.15;
   const z=cam.z*DPR;
