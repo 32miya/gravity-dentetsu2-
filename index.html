@@ -314,7 +314,7 @@ button{font-family:inherit;cursor:pointer;border:0}
     <div id="qinfo">📚 問題を読み込み中…</div>
     <div id="repInfo" class="hidden"><span></span> <button id="repExp">書き出す</button> <button id="repClr">消去</button></div>
     <label class="filebtn">＋ 問題ファイル(JSON)を追加で読み込む<input type="file" id="qfile" accept=".json,application/json" multiple hidden></label>
-    <div class="howto">🚂 ルーレットで決まる目的地をめざす日本一周すごろく<br>🎲 手番の人がサイコロを振ってご当地クイズに挑戦<br>🎯 出目でジャンルと難易度が決まる<br>　1🍜グルメ・名所・祭り 2💋恋愛・大人の雑学 3🎬アニメ<br>　4📺昭和平成 5📱ネット・SNS 6🍙食べ物・お菓子<br>⭕ 正解なら出目の数だけ進む／❌ 不正解ならその場にとどまる<br>🏢 手番の人が正解したら、止まった駅の物件を買える<br>👑 駅の物件を全部買うと「独占」で収益・通行料2倍<br>💥 他人の独占駅に正解して止まったら、サイコロで奇数を出せば1件買い取れる<br>🟨 カード売り場で便利カードを買える（サイコロの前に使用）。順位が下の人ほど安く、最下位はプレゼントも<br>🤫 他の人の手番でもこっそり答えて当たれば賞金<br>🎯 目的地はサイコロの目でぴったり止まった時だけ到着（超えると通過）<br>🏁 目的地に決まった回数たどり着いたらゲーム終了<br>👾 目的地から一番遠い人に「グラ廃神」が取りつき悪さをする。取りつかれた人と他の人がすれ違う（通過・同じマスに停止）と乗り移る<br>📶 通信が切れても自動で再接続（その間はCPUが代行）。ホストが戻らない時はゲストが自動で引き継ぎ。途中参加・途中退出もOK<br>💰 全員が1周で1ヶ月、3ヶ月ごとに決算。所持金がマイナスになると物件が自動で売られる。最後は総資産で勝負！</div>
+    <div class="howto">🚂 ルーレットで決まる目的地をめざす日本一周すごろく<br>🎲 手番の人がサイコロを振ってご当地クイズに挑戦<br>🎯 出目でジャンルと難易度が決まる<br>　1🍜グルメ・名所・祭り 2💋恋愛・大人の雑学 3🎬アニメ<br>　4📺昭和平成 5📱ネット・SNS 6🍙食べ物・お菓子<br>⭕ 正解なら出目の数だけ進む／❌ 不正解ならその場にとどまる<br>🏢 手番の人が正解したら、止まった駅の物件を買える<br>👑 駅の物件を全部買うと「独占」で収益・通行料2倍<br>💥 他人の独占駅に正解して止まったら、サイコロで奇数を出せば1件買い取れる<br>🟨 カード売り場で便利カードを買える（サイコロの前に使用）。順位が下の人ほど安く、最下位はプレゼントも<br>🤫 他の人の手番でもこっそり答えて当たれば賞金<br>🎯 目的地はサイコロの目でぴったり止まった時だけ到着（超えると通過）<br>🏁 目的地に決まった回数たどり着いたらゲーム終了<br>👾 目的地から一番遠い人に「グラ廃神」が取りつき悪さをする。お金持ちほど被害が大きい。取りつかれた人と他の人がすれ違う（通過・同じマスに停止）と乗り移る<br>📶 通信が切れても自動で再接続（その間はCPUが代行）。ホストが戻らない時はゲストが自動で引き継ぎ。途中参加・途中退出もOK<br>💰 全員が1周で1ヶ月、3ヶ月ごとに決算。所持金がマイナスになると物件が自動で売られる。最後は総資産で勝負！</div>
   </div>
 </div>
 
@@ -922,17 +922,26 @@ function doBuy(p,k){
 const BINBO_NAME='グラ廃神';
 function binboAttach(target,why){ if(!target) return; state.binbo={pid:target.id,moved:false,acted:-1};
   cutin('binbo/front',target,`${BINBO_NAME}が<br>取りついた！`,0,false); addChat('👾','#888',`${BINBO_NAME}が ${target.name} に取りついた${why?'（'+why+'）':''}`); }
+// グラ廃神の悪さ：資産が多いほど被害が大きい（順位の入れ替わりを起こすため）。10%は気まぐれで何もしない
 function binboAct(p){
-  const r=Math.random(), cards=p.cards||[], mine=Object.keys(state.owners).filter(k=>state.owners[k]===p.id);
-  if(r<0.25 && mine.length){ const key=mine[Math.floor(Math.random()*mine.length)]; const [st,kk]=key.split('-').map(Number); const pr=ST[st].props[kk];
-    delete state.owners[key]; cutin('binbo/front',p,`${BINBO_NAME}が<br>「${esc(pr.nm)}」を勝手に売った！`,0,false); addChat('👾','#888',`${BINBO_NAME}：${p.name} の ${ST[st].n}「${pr.nm}」を勝手に手放した`); return true; }
-  if(r<0.38 && cards.length){ const i=Math.floor(Math.random()*cards.length), k=cards[i]; cards.splice(i,1);
-    cutin('binbo/front',p,`${BINBO_NAME}が<br>${CARDS[k].n}を捨てた！`,0,false); addChat('👾','#888',`${BINBO_NAME}：${p.name} の ${CARDS[k].n} を捨てた`); return true; }
-  if(r<0.62){ const amt=Math.round((300+Math.random()*1200)*(1+state.month/12)/100)*100; p.money-=amt;
-    const what=['ガラクタの壺','謎の健康器具','高すぎる絵画','使わない別荘の会員権','ニセモノの宝石'][Math.floor(Math.random()*5)];
-    cutin('binbo/front',p,`${BINBO_NAME}が<br>${what}を買った！`,-amt,false); addChat('👾','#888',`${BINBO_NAME}：${p.name} のお金で${what}を購入（−${yen(amt)}）`); return true; }
-  const amt=Math.max(500,Math.round(Math.max(0,p.money)*(0.1+Math.random()*0.1)/100)*100); p.money-=amt;
-  cutin('binbo/front',p,`${BINBO_NAME}が<br>お金を持ち去った！`,-amt,false); addChat('👾','#888',`${BINBO_NAME}：${p.name} から ${yen(amt)} を持ち去った`); return true; }
+  const A=Math.max(0,assets(p)), n=state.players.length, rk=rankOf(p);
+  const rf=n<2?1:1.3-0.7*rk/(n-1);           // 1位1.3倍 〜 最下位0.6倍
+  const r=Math.random(), cards=p.cards||[];
+  const mine=Object.keys(state.owners).filter(k=>state.owners[k]===p.id).map(k=>{ const [st,kk]=k.split('-').map(Number); return {k,st,pr:ST[st].props[kk]}; });
+  const say=(t,amt,chat)=>{ cutin('binbo/front',p,t,amt,false); addChat('👾','#888',chat); return true; };
+  if(r<0.10){ cutin('binbo/front',p,`${BINBO_NAME}は<br>今日は気分が乗らないらしい…`,0,true); addChat('👾','#888',`${BINBO_NAME}：${p.name} に取りついているが、今日は何もしなかった（気まぐれ）`); return true; }
+  if(r<0.35 && mine.length){ // 高い物件から勝手に手放す。資産が多いほど件数が増える
+    const cnt=Math.max(1,Math.min(3,Math.round(A/40000*rf))); mine.sort((a,b)=>b.pr.price-a.pr.price); const sold=mine.slice(0,cnt);
+    sold.forEach(x=>delete state.owners[x.k]); const tot=sold.reduce((a,x)=>a+x.pr.price,0);
+    return say(`${BINBO_NAME}が物件${sold.length}件を<br>勝手に手放した！`,-tot,`${BINBO_NAME}：${p.name} の ${sold.map(x=>ST[x.st].n+'「'+x.pr.nm+'」').join('、')} を勝手に手放した（−${yen(tot)}相当）`); }
+  if(r<0.45 && cards.length){ const k=cards.splice(Math.floor(Math.random()*cards.length),1)[0];
+    const amt=Math.round(A*0.02*rf/100)*100; p.money-=amt;
+    return say(`${BINBO_NAME}が${CARDS[k].n}を捨てて<br>散財した！`,-amt,`${BINBO_NAME}：${p.name} の ${CARDS[k].n} を捨て、${yen(amt)} 散財`); }
+  if(r<0.70){ const amt=Math.max(300,Math.round(A*(0.04+Math.random()*0.05)*rf/100)*100); p.money-=amt;
+    const what=['ガラクタの壺','謎の健康器具','高すぎる絵画','使わない別荘の会員権','ニセモノの宝石','巨大な金の像','誰も乗らない豪華客船'][Math.floor(Math.random()*7)];
+    return say(`${BINBO_NAME}が<br>${what}を買った！`,-amt,`${BINBO_NAME}：${p.name} のお金で${what}を購入（−${yen(amt)}）`); }
+  const amt=Math.max(500,Math.round(A*(0.08+Math.random()*0.08)*rf/100)*100); p.money-=amt;
+  return say(`${BINBO_NAME}が<br>お金を持ち去った！`,-amt,`${BINBO_NAME}：${p.name} から ${yen(amt)} を持ち去った`); }
 function endTurn(){
   if(state.goalsDone>=state.goalN) return endGame();
   { const c=curP(); if(state.binbo && c && state.binbo.pid===c.id && state.binbo.acted!==state.turnNo){ state.binbo.acted=state.turnNo; binboAct(c); state.phase='binbo'; commit(); setTimeout(endTurn,2600); return; } }
