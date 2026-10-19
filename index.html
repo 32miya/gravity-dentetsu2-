@@ -702,7 +702,10 @@ function startGame(){
 function beginTurn(i){
   state.players.forEach(x=>x.usedCard=false); state.turnNo=(state.turnNo||0)+1; if(state.binbo) state.binbo.moved=false;
   state.cur=i; state.phase='roll'; state.dice=null; state.quiz=null; state.moves=null; state.chooser=null;
-  const p=curP(); state.msg=`${p.name} の手番！サイコロを振ってください`;
+  const p=curP();
+  if(p.rest>0){ p.rest--; state.phase='rest'; state.msg=`🌀 ${p.name} は今回の手番お休み`;
+    cutin('typhoon',p,'今回の手番は<br>お休み…',0,false); addChat('🌀','#888',`${p.name} は手番お休み`); commit(); setTimeout(endTurn,2600); return; }
+  state.msg=`${p.name} の手番！サイコロを振ってください`;
 
   commit();
 }
@@ -758,7 +761,7 @@ function useCard(p,v){ const i=v&&v.i, k=(p.cards||[])[i], c=CARDS[k]; if(!c||c.
   if(k==='tokkyu'){ p.diceN=3; return done('サイコロ3個で進む'); }
   if(k==='yamawake'){ const top=state.players.filter(x=>x!==p).sort((a,b)=>b.money-a.money)[0]; if(!top||top.money<=0) return;
     const amt=Math.round(top.money*0.1/100)*100; top.money-=amt; p.money+=amt; return done(`${top.name} から ${yen(amt)} もらった`); }
-  if(k==='ashidome'){ const t=P(v.t); if(!t||t===p) return; t.rest=1; return done(`${t.name} は次の移動がお休み`); }
+  if(k==='ashidome'){ const t=P(v.t); if(!t||t===p) return; t.rest=1; return done(`${t.name} は次の手番がお休み`); }
   if(k==='buttobi'){ const cands=ST.filter(x=>x.kind==='st'&&x.tier>0&&x.i!==p.pos&&x.i!==state.dest); const to=cands[Math.floor(Math.random()*cands.length)];
     p.pos=to.i; p.trail=[to.i]; return done(`${to.n} へワープ！`); }
   if(k==='baishu'){ const [st,kk]=String(v.t||'').split('-').map(Number); const pr=ST[st]&&ST[st].props[kk], o=pr&&ownerOf(st,kk), op=o&&P(o);
@@ -802,7 +805,7 @@ function startQuiz(){
     hint:p.lucky?[p.id]:[],removed,revealed:false};
   state.phase='quiz'; state.msg=`【${st.n}の${GENRES[lv].i}${GENRES[lv].n}】${p.name} が挑戦！`;
   commit();
-  clearTimeout(quizTimer); quizTimer=setTimeout(revealQuiz,QUIZ_SEC*1000+500);
+  clearTimeout(quizTimer); quizTimer=setTimeout(revealQuiz,QUIZ_SEC*1000+2500);
 }
 function doAnswer(p,v){
   const q=state.quiz; q.answers[p.id]={c:v,o:++q.order};
@@ -813,8 +816,7 @@ function revealQuiz(){
   const q=state.quiz; if(!q||q.revealed||state.phase!=='quiz') return; q.revealed=true;
   const d=q.d, okN=[]; state.moves={};
   const p=curP(); { const a=q.answers[p.id]; const ok=!!a&&a.c===q.ans; p.lucky=!ok;
-    if(p.rest>0){ p.rest--; state.moves[p.id]={dir:0,left:0,ok,rest:true}; }
-    else state.moves[p.id]={dir:ok?1:0,left:ok?d:0,ok};
+    state.moves[p.id]={dir:ok?1:0,left:ok?d:0,ok};
     if(ok){ okN.push(p.name); p.correct=(p.correct||0)+1; p.streak=(p.streak||0)+1; } else p.streak=0; }
   state.phase='reveal';
   state.fx={seq:(state.fx?.seq||0)+1,ok:okN.length?[p.id]:[],ng:okN.length?[]:[p.id]};
@@ -916,7 +918,7 @@ function afterMove(){
   const r=curP(), rm=state.moves[r.id];
   if(!r.finished){ const x=Math.random();
     if(x<0.10 && (r.cards||[]).length<CARD_MAX){ (r.cards=r.cards||[]).push('kyuko'); lines.push(PL([r.id],`🎫 ${r.name} 急行カードをもらった！`)); cutin('express',r,'急行カードを<br>もらった！',0,true,true); }
-    else if(x<0.16){ r.rest=1; lines.push(PL([r.id],`🌀 ${r.name} 台風接近！次の移動はお休み`)); cutin('typhoon',r,'台風接近！<br>次の移動はお休み',0,false,true); }
+    else if(x<0.16){ r.rest=1; lines.push(PL(null,`🌀 ${r.name} 台風接近！次の手番はお休み`)); cutin('typhoon',r,'台風接近！<br>次の手番はお休み',0,false); }
     else if(x<0.26 && ST[r.pos].kind==='st'){ const b=(5+Math.floor(Math.random()*16))*100; r.money+=b; lines.push(PL([r.id],`🎉 ${r.name} ${ST[r.pos].n}のご当地祭りで${yen(b)}の臨時収入`)); cutin('fest',r,`${ST[r.pos].n}の<br>ご当地祭り！`,b,true,true); }
   }
   if(lines.length){ toast(lines); lines.forEach(l=>addChat('📢','#888',strip(l.t))); }
