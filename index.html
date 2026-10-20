@@ -194,6 +194,13 @@ button{font-family:inherit;cursor:pointer;border:0}
 .choices button:disabled{cursor:default}
 .choices button.sel{background:#fff1c4;border-color:#e0a000;color:#7a5600}
 .choices button.cut{opacity:.3;text-decoration:line-through}
+.choices.rev button{opacity:.38;position:relative}
+.choices.rev button.ok{opacity:1;background:linear-gradient(#e9ffe4,#b8f0ae);border:4px solid #1f9a1f;color:#0d4f0d;font-weight:bold;font-size:18px;box-shadow:0 0 0 4px #ffd84a,0 0 18px rgba(255,200,0,.9);transform:scale(1.06);animation:okp .9s ease-in-out infinite alternate;z-index:1}
+.choices.rev button.ng{opacity:.85}
+.choices button .mk{position:absolute;left:-8px;top:-12px;font-size:24px;filter:drop-shadow(0 1px 0 #fff)}
+@keyframes okp{from{transform:scale(1.03)}to{transform:scale(1.09)}}
+.ansban{text-align:center;font-size:19px;color:#fff;background:#1f9a1f;border-radius:12px;padding:6px 10px;margin:0 0 10px;box-shadow:0 3px 0 #146914;animation:rpop .4s cubic-bezier(.2,1.4,.4,1)}
+.ansban b{color:#ffe36a}
 .qbar{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:#555;margin-bottom:2px}
 .lv{display:block;font-size:13px;color:#c47a00;letter-spacing:.05em}
 .tbar{position:relative;height:16px;background:#ddd;border-radius:8px;overflow:hidden;margin:4px 0 6px}
@@ -880,7 +887,7 @@ function revealQuiz(){
   q.prize=prize; { const waiting=active().filter(x=>x!==p&&!x.cpu||x!==p&&x.cpu); if(q.side.length>=2&&q.side.length===waiting.length) cutin('ui2/coins',null,'待ってる全員が<br>こっそり正解！',prize,true); }
   if(q.side.length){ const ws=active().filter(x=>q.side.includes(x.name)); state.sideNote={seq:(state.sideNote?.seq||0)+1,prize,items:ws.map(x=>({n:x.name,c:x.color}))}; }
   commit();
-  afterCuts(()=>{ state.phase='moving'; commit(); setTimeout(moveTick,300); },2600);
+  afterCuts(()=>{ state.phase='moving'; commit(); setTimeout(moveTick,300); },3600);
 }
 // ---- 移動（桃鉄式：進行方向は自由。同じ移動中に来た道は戻れない） ----
 function optsAt(pos,prev){ let o=ADJ[pos].filter(x=>x!==prev); if(!o.length) o=ADJ[pos].slice(); return o; }
@@ -1545,7 +1552,7 @@ function iconOf(p){ return 'ui/face_'+bandKey(p)+'.webp'; }
 BAND_OF.forEach(k=>{ const a=new Image(); a.src='ui/band_'+k+'.webp'; const b=new Image(); b.src='ui/face_'+k+'.webp'; });
 let lastCutId=null, cutQ=[], cutBusy=false, toastHold=null;
 function feedCutins(c){ if(lastCutId===null){ lastCutId=c?c.n:0; return; } if(!c) return; c.items.filter(it=>it.id>lastCutId).forEach(it=>{ const L=cutQ[cutQ.length-1]; if(L&&L.img==='ui/buy'&&it.img==='ui/buy'&&L.who===it.who){ L.n=(L.n||1)+1; L.amt+=it.amt; L.ttl=`物件を${L.n}件<br>購入！`; } else cutQ.push({...it}); }); lastCutId=c.n; if(!cutBusy) playCut(); }
-const SMALL_CUT=new Set(['ui2/map','ui/ok','ui/ng','ui/buy','ui/toll','ui/stealfail','express','typhoon','fest']);
+const SMALL_CUT=new Set(['ui2/map','ui2/streak','ui/ok','ui/ng','ui/buy','ui/toll','ui/stealfail','express','typhoon','fest']);
 const CUT_SND={'ui3/kb_transform':'binbo','ui3/kb_rage':'binbo','ui3/b_gift':'good','ui3/news_good':'turn','ui3/news_bad':'bad','ui3/lastdest':'fanfare','ui3/finalsettle':'fanfare','ui3/rich2':'coin','ui3/rich5':'coin','ui3/rich10':'fanfare','ui3/s_spring':'good','ui3/s_summer':'good','ui3/s_autumn':'good','ui3/s_winter':'ng','ui2/goal':'fanfare','ui2/bonus':'coin','ui2/b_fall':'binbo','ui2/b_chase':'binbo','ui2/b_rage':'binbo','ui2/b_sleep':'pop','ui2/b_broom':'good','ui2/streak':'good','ui2/crown':'fanfare','ui2/mud':'good','ui2/coins':'coin','ui2/card':'card','ui2/stolen':'bad','ui2/passby':'ng','ui2/seized':'lose','ui2/map':'stop','ui/ok':'ok','ui/ng':'ng','ui/buy':'coin','ui/toll':'lose','ui/stealfail':'ng',express:'card',typhoon:'bad',fest:'coin',arrive:'fanfare',mono:'fanfare',steal:'good',settle:'coin','ui/startband':'fanfare','ui/lastmonth':'turn','binbo/front':'binbo'};
 function cutSound(it){ const k=CUT_SND[it.img]||(/^b\d/.test(it.img)?'good':/^r\d/.test(it.img)?'bad':(it.good?'good':'bad')); SFX.play(k); }
 const IMG_MISS=new Set();
@@ -1652,9 +1659,10 @@ function renderModal(myTurn){
     ${rev?'':`<div class="tbar"><div id="qfill"></div><span id="qtimer">${q.limit}</span></div>`}
     <div class="q">${esc(q.q)}</div>
     ${hint&&!rev?'<div class="hint">🍀 前回不正解だったので2択に絞られています</div>':''}
-    <div class="choices">${q.choices.map((c,i)=>{ const cut=hint&&q.removed.includes(i);
+    ${rev?`<div class="ansban">⭕ 正解は「<b>${esc(q.choices[q.ans])}</b>」</div>`:''}
+    <div class="choices ${rev?'rev':''}">${q.choices.map((c,i)=>{ const cut=hint&&q.removed.includes(i);
       const cls = rev ? (i===q.ans?'ok':(my&&my.c===i?'ng':(cut?'cut':''))) : ((my&&my.c===i)?'sel':(cut?'cut':''));
-      return `<button data-ans="${i}" ${(!canAns||my||cut)?'disabled':''} class="${cls}">${esc(c)}</button>`; }).join('')}</div>
+      return `<button data-ans="${i}" ${(!canAns||my||cut)?'disabled':''} class="${cls}">${rev&&i===q.ans?'<span class="mk">⭕</span>':rev&&cls==='ng'?'<span class="mk">❌</span>':''}${esc(c)}</button>`; }).join('')}</div>
     <div class="chips">${[cp].map(p=>{ const a=q.answers[p.id];
       const mark = rev ? (a&&a.c===q.ans?'⭕':'❌') : (a?'✔':'…');
       return `<span class="chip" style="background:${p.color}">${mark} ${esc(p.name)}</span>`; }).join('')}</div>
