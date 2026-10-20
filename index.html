@@ -165,6 +165,9 @@ button{font-family:inherit;cursor:pointer;border:0}
 #cutin .btxt{display:flex;flex-direction:column;align-items:center;gap:4px}
 #cutin .bttl{font-size:clamp(24px,7vw,40px);font-weight:bold;color:#fff;text-align:center;line-height:1.2;text-shadow:3px 3px 0 #2b2420,-2px -2px 0 #2b2420,2px -2px 0 #2b2420,-2px 2px 0 #2b2420}
 #cutin .cf{position:fixed;top:-20px;width:10px;height:14px;animation:cfall linear forwards;pointer-events:none;z-index:2}
+#plist .newsl{font-size:12px;padding:3px 8px;margin:2px 4px;border-radius:8px;font-weight:bold}#plist .newsl.g{background:#fff4c2;color:#8a5a00}#plist .newsl.b{background:#ffd9d6;color:#9a2018}
+#plist .titl{display:flex;flex-wrap:wrap;gap:4px;padding:2px 4px}#plist .titl span{font-size:11px;color:#fff;padding:1px 7px;border-radius:9px;font-weight:bold}
+.gtag{display:inline-block;font-size:11px;background:#eef3ff;color:#2a4a8a;border-radius:8px;padding:0 6px;font-weight:bold;vertical-align:middle}
 #minicut{position:fixed;left:50%;top:calc(112px + env(safe-area-inset-top));z-index:29;pointer-events:none;display:flex;align-items:center;gap:8px;background:#fff;border:3px solid #2b2420;border-radius:16px;padding:5px 12px 5px 5px;box-shadow:0 5px 0 rgba(0,0,0,.25);transform:translate(-50%,-30px) scale(.8);opacity:0;transition:transform .18s cubic-bezier(.2,1.5,.4,1),opacity .15s;max-width:94vw}
 #minicut.on{transform:translate(-50%,0) scale(1);opacity:1}
 #minicut.out{transform:translate(-50%,-20px) scale(.9);opacity:0}
@@ -649,7 +652,37 @@ function ownerOf(s,k){ return state.owners[pkey(s,k)]; }
 function pidx(s){ return ST[s].props.map((_,k)=>k); }
 function monopolist(s){ const o=ownerOf(s,0); return o && ST[s].props.length && pidx(s).every(k=>ownerOf(s,k)===o) ? o : null; }
 function assets(p){ let v=p.money; for(const key in state.owners) if(state.owners[key]===p.id){const [s,k]=key.split('-').map(Number); v+=ST[s].props[k].price;} return v; }
-function income(p){ let v=0; for(const key in state.owners) if(state.owners[key]===p.id){const [s,k]=key.split('-').map(Number); const pr=ST[s].props[k]; v+=pr.price*pr.rate/100*(monopolist(s)===p.id?2:1);} return Math.round(v); }
+// ---- グループ物件（同じ種類を3件で収益1.5倍、最多保有の「◯◯王」は2倍）----
+const PGROUPS=[
+ {k:'ramen',n:'ラーメン王',t:'ラーメン・麺',ic:'🍜',re:/ラーメン|麺|中華そば/},
+ {k:'onsen',n:'温泉王',t:'温泉・宿',ic:'♨️',re:/温泉|旅館|宿|湯/},
+ {k:'castle',n:'お城王',t:'お城',ic:'🏯',re:/城/},
+ {k:'cafe',n:'茶屋王',t:'茶屋・カフェ',ic:'🍵',re:/茶屋|カフェ|喫茶|茶/},
+ {k:'sushi',n:'海の幸王',t:'寿司・海鮮',ic:'🍣',re:/寿司|海鮮|漁|蟹|かに|まぐろ|ホタテ|干物|うなぎ|鰻|市場|イカ|カキ|牡蠣|ふぐ|魚/},
+ {k:'soba',n:'そば・うどん王',t:'そば・うどん',ic:'🥢',re:/そば|うどん/},
+ {k:'sweets',n:'スイーツ王',t:'お菓子・スイーツ',ic:'🍡',re:/菓|饅頭|まんじゅう|団子|餅|せんべい|プリン|パン|ケーキ|おこし|羊羹|柿/},
+ {k:'craft',n:'匠王',t:'工房・伝統工芸',ic:'🏺',re:/工房|細工|鉄器|窯|陶|漆|和紙|人形/},
+ {k:'sake',n:'酒蔵王',t:'酒蔵・ビール',ic:'🍶',re:/酒|蔵|ビール|ワイン|醸/},
+ {k:'farm',n:'農園王',t:'農園・牧場',ic:'🌾',re:/農園|牧場|農場|畑/},
+ {k:'meat',n:'肉王',t:'肉料理・餃子',ic:'🍖',re:/牛|豚|鶏|ジンギスカン|ステーキ|焼肉|とんかつ|餃子/},
+ {k:'port',n:'港王',t:'港・船',ic:'⚓',re:/港|船|フェリー/},
+ {k:'build',n:'ビル王',t:'ビル・タワー・ホテル',ic:'🏙️',re:/ビル|タワー|ホテル|ヒルズ|オフィス|百貨店/}];
+const PG={}; PGROUPS.forEach(g=>PG[g.k]=g);
+ST.forEach(st=>st.props.forEach(pr=>{ const g=PGROUPS.find(g=>g.re.test(pr.nm)); pr.g=g?g.k:null; }));
+function grpCount(pid){ const c={}; for(const key in state.owners) if(state.owners[key]===pid){ const [s,k]=key.split('-').map(Number); const g=ST[s].props[k].g; if(g) c[g]=(c[g]||0)+1; } return c; }
+function grpMul(pid,g,cnt){ if(!g) return 1; const n=cnt[g]||0; if(n<3) return 1; return (state.titles||{})[g]===pid?2:1.5; }
+// ---- 季節（1ヶ月目＝4月）----
+const SEASONS={spring:{n:'春',ic:'🌸',d:'桜の季節！東北・関東の物件収益1.3倍'},summer:{n:'夏',ic:'🎆',d:'台風シーズン！台風が来やすくなる'},autumn:{n:'秋',ic:'🍁',d:'紅葉シーズン！茶屋・宿・温泉・寺社の物件収益1.3倍'},winter:{n:'冬',ic:'⛄',d:'雪の季節！北海道では移動が1マス減る'}};
+function calMonth(m){ return ((((m??state.month)+2)%12)+12)%12+1; }
+function seasonOf(m){ const c=calMonth(m); return c>=3&&c<=5?'spring':c<=8&&c>=6?'summer':c>=9&&c<=11?'autumn':'winter'; }
+function seasonMul(s,pr){ const se=seasonOf(); const rg=regionOf(s);
+  if(se==='spring' && (rg==='tohoku'||rg==='kanto')) return 1.3;
+  if(se==='autumn' && (pr.g==='cafe'||pr.g==='onsen'||/寺|神社|渓|紅葉|庭園/.test(pr.nm))) return 1.3;
+  return 1; }
+// ---- 臨時ニュース（次の決算まで有効）----
+const REG_N={hokkaido:'北海道',tohoku:'東北',kanto:'関東・中部',kinki:'近畿',chushikoku:'中国・四国',kyushu:'九州・沖縄'};
+function newsMul(s){ const nw=state.news; if(!nw) return 1; if(nw.type==='boom'&&nw.st===s) return 2; if(nw.type==='quake'&&nw.reg===regionOf(s)) return 0.5; if(nw.type==='tour'&&nw.reg===regionOf(s)) return 1.5; return 1; }
+function income(p){ let v=0; const cnt=grpCount(p.id); for(const key in state.owners) if(state.owners[key]===p.id){const [s,k]=key.split('-').map(Number); const pr=ST[s].props[k]; v+=pr.price*pr.rate/100*(monopolist(s)===p.id?2:1)*grpMul(p.id,pr.g,cnt)*seasonMul(s,pr)*newsMul(s);} return Math.round(v); }
 
 // ===================== ホスト側ゲームロジック =====================
 let cpuTimer=null;
@@ -695,7 +728,7 @@ function startGame(){
   if(!QPOOL.length){ alert('問題が読み込まれていません'); return; }
   state.players=shuffle(state.players);
   state.players.forEach(p=>{ p.pos=START; p.trail=[START]; p.arrivals=0; });
-  state.cur=0; state.month=1; state.dest=null;
+  state.cur=0; state.month=1; state.dest=null; state.season=seasonOf(1); state.titles={}; state.news=null; state.finalSettled=false;
   addChat('🚉','#888','東京から日本一周の旅、出発進行！'); cutin('ui/startband',null,'東京駅から<br>出発進行！',0,true);
   doRoulette(()=>beginTurn(0));
 }
@@ -746,7 +779,7 @@ function doStealRoll(p){
 function doStealBuy(p,k){
   const s=p.pos, pr=ST[s].props[k], o=ownerOf(s,k), op=o&&P(o);
   if(!pr || !op || o===p.id || p.money<pr.price) return;
-  p.money-=pr.price; op.money+=pr.price; state.owners[pkey(s,k)]=p.id;
+  p.money-=pr.price; op.money+=pr.price; state.owners[pkey(s,k)]=p.id; titleCheck();
   cutin('steal',p,`${esc(op.name)}の<br>${ST[s].n}独占を崩した！`,0,true); toast(`💥 ${p.name} が ${ST[s].n} の「${esc(pr.nm)}」を買い取り！<br>${esc(op.name)} の👑独占が崩れた`);
   addChat('💥','#888',`${p.name} が ${op.name} から ${ST[s].n}「${pr.nm}」を${yen(pr.price)}で買い取り、独占を崩した`);
   commit(); setTimeout(endTurn,2200);
@@ -766,7 +799,7 @@ function useCard(p,v){ const i=v&&v.i, k=(p.cards||[])[i], c=CARDS[k]; if(!c||c.
     p.pos=to.i; p.trail=[to.i]; return done(`${to.n} へワープ！`); }
   if(k==='baishu'){ const [st,kk]=String(v.t||'').split('-').map(Number); const pr=ST[st]&&ST[st].props[kk], o=pr&&ownerOf(st,kk), op=o&&P(o);
     if(!pr||!op||o===p.id||assets(op)<=assets(p)) return; const half=Math.round(pr.price/2); if(p.money<half) return;
-    p.money-=half; op.money+=half; state.owners[pkey(st,kk)]=p.id; done(`${op.name} の ${ST[st].n}「${pr.nm}」を ${yen(half)} で買収`); cutin('ui2/stolen',op,`「${esc(pr.nm)}」を<br>${esc(p.name)}に買収された！`,0,false); commit(); return; }
+    p.money-=half; op.money+=half; state.owners[pkey(st,kk)]=p.id; titleCheck(); done(`${op.name} の ${ST[st].n}「${pr.nm}」を ${yen(half)} で買収`); cutin('ui2/stolen',op,`「${esc(pr.nm)}」を<br>${esc(p.name)}に買収された！`,0,false); commit(); return; }
 }
 function doRoll(p){
   const nd=p.diceN||(p.express?2:1); p.express=false; p.diceN=0;
@@ -816,12 +849,14 @@ function revealQuiz(){
   const q=state.quiz; if(!q||q.revealed||state.phase!=='quiz') return; q.revealed=true;
   const d=q.d, okN=[]; state.moves={};
   const p=curP(); { const a=q.answers[p.id]; const ok=!!a&&a.c===q.ans; p.lucky=!ok;
-    state.moves[p.id]={dir:ok?1:0,left:ok?d:0,ok};
+    let dd=d; if(ok && d>1 && seasonOf()==='winter' && regionOf(p.pos)==='hokkaido'){ dd=d-1; q.snow=1; }
+    state.moves[p.id]={dir:ok?1:0,left:ok?dd:0,ok};
     if(ok){ okN.push(p.name); p.correct=(p.correct||0)+1; p.streak=(p.streak||0)+1; } else p.streak=0; }
   state.phase='reveal';
   state.fx={seq:(state.fx?.seq||0)+1,ok:okN.length?[p.id]:[],ng:okN.length?[]:[p.id]};
   state.msg=`正解は「${q.choices[q.ans]}」！ `+(okN.length?`⭕ ${p.name} は${d}マス進む`:`❌ ${p.name} はその場にとどまる`);
   addChat('❓','#888',`${p.name}：正解「${q.choices[q.ans]}」 ${okN.length?'⭕':'❌'}`);
+  if(okN.length&&q.snow){ cutin('ui3/s_winter',p,'大雪で<br>1マス減速…',0,false,false,{fb:'cuts/typhoon'}); addChat('⛄','#888',`${p.name}：北海道の大雪で${d-1}マスに減速`); }
   if(okN.length&&p.streak>=3&&p.streak%3===0) cutin('ui2/streak',p,`${p.streak}問連続正解！<br>${d}マス進む`,0,true); else if(okN.length) cutin('ui/ok',p,`正解！<br>${d}マス進む`,0,true); else cutin('ui/ng',p,'不正解…<br>その場にとどまる',0,false);
   const prize=SIDE_PRIZE*q.lv; q.side=[];
   active().forEach(x=>{ if(x===p) return; const a=q.answers[x.id]; if(a&&a.c===q.ans){ x.money+=prize; x.sideOk=(x.sideOk||0)+1; q.side.push(x.name); } });
@@ -892,7 +927,7 @@ function doRoulette(next){
   state.roulette={seq:(state.roulette?.seq||0)+1,names,pick:pick.n};
   state.phase='roulette'; state.msg='🎯 目的地ルーレット！'; commit();
   setTimeout(()=>{ state.destFrom=from; state.dest=pick.i; state.tripLen=Math.round(avg(pick.i)); state.pendingRoulette=false;
-    if(state.goalsDone===state.goalN-1) cutin('ui/lastmonth',null,'いよいよ<br>最後の目的地！',0,true);
+    if(state.goalsDone===state.goalN-1) cutin('ui3/lastdest',null,'いよいよ<br>最後の目的地！',0,true,false,{big:1,dur:2400,fb:'ui/lastmonth'});
     cutin('ui2/map',null,`次の目的地は<br>${pick.n}！`,0,true);
     state.msg=`🎯 次の目的地は「${pick.n}」！`; addChat('🎯','#888',`次の目的地は ${pick.n}（${state.tripLen}マス先）`); commit(); setTimeout(next,1600); },3600);
 }
@@ -916,10 +951,10 @@ function afterMove(){
       state.evfx={seq:(state.evfx?.seq||0)+1,list:[...(state.evfx?.list||[]).slice(-6)]}; state.evfx.list.push({id:p.id,k,amt}); }
   }
   const r=curP(), rm=state.moves[r.id];
-  if(!r.finished){ const x=Math.random();
+  if(!r.finished){ const x=Math.random(), ty=seasonOf()==='summer'?0.24:0.16;
     if(x<0.10 && (r.cards||[]).length<CARD_MAX){ (r.cards=r.cards||[]).push('kyuko'); lines.push(PL([r.id],`🎫 ${r.name} 急行カードをもらった！`)); cutin('express',r,'急行カードを<br>もらった！',0,true,true); }
-    else if(x<0.16){ r.rest=1; lines.push(PL(null,`🌀 ${r.name} 台風接近！次の手番はお休み`)); cutin('typhoon',r,'台風接近！<br>次の手番はお休み',0,false); }
-    else if(x<0.26 && ST[r.pos].kind==='st'){ const b=(5+Math.floor(Math.random()*16))*100; r.money+=b; lines.push(PL([r.id],`🎉 ${r.name} ${ST[r.pos].n}のご当地祭りで${yen(b)}の臨時収入`)); cutin('fest',r,`${ST[r.pos].n}の<br>ご当地祭り！`,b,true,true); }
+    else if(x<ty){ r.rest=1; lines.push(PL(null,`🌀 ${r.name} 台風接近！次の手番はお休み`)); cutin('typhoon',r,(seasonOf()==='summer'?'夏の':'')+'台風接近！<br>次の手番はお休み',0,false); }
+    else if(x<ty+0.10 && ST[r.pos].kind==='st'){ const b=(5+Math.floor(Math.random()*16))*100; r.money+=b; lines.push(PL([r.id],`🎉 ${r.name} ${ST[r.pos].n}のご当地祭りで${yen(b)}の臨時収入`)); cutin('fest',r,`${ST[r.pos].n}の<br>ご当地祭り！`,b,true,true); }
   }
   if(lines.length){ toast(lines); lines.forEach(l=>addChat('📢','#888',strip(l.t))); }
   state.moves=null;
@@ -937,6 +972,7 @@ function doBuy(p,k){
   const s=p.pos, pr=ST[s].props[k];
   if(!pr || ownerOf(s,k) || p.money<pr.price) return;
   state.owners[pkey(s,k)]=p.id; p.money-=pr.price; cutin('ui/buy',p,`${esc(pr.nm)}<br>を購入！`,-pr.price,true);
+  titleCheck();
   if(monopolist(s)===p.id){ cutin('mono',p,`${ST[s].n}を独占！<br>収益・通行料2倍`,0,true); toast(`👑 ${p.name} が ${ST[s].n} を独占！<br>収益・通行料が2倍に`); addChat('👑','#888',`${p.name} が ${ST[s].n} を独占`); }
   commit();
 }
@@ -951,6 +987,9 @@ function binboAct(p){
   const r=Math.random(), cards=p.cards||[];
   const mine=Object.keys(state.owners).filter(k=>state.owners[k]===p.id).map(k=>{ const [st,kk]=k.split('-').map(Number); return {k,st,pr:ST[st].props[kk]}; });
   const say=(t,amt,chat)=>{ cutin((-amt>A*0.12||/件を/.test(t)&&-amt>A*0.1)?'ui2/b_rage':'binbo/front',p,t,amt,false); addChat('👾','#888',chat); return true; };
+  if(r>=0.97){ if(Math.random()<0.5 && cards.length<CARD_MAX){ const rare=['tokkyu','oharai','baishu','shinkansen'].filter(k=>CARDS[k]); const k=rare.length?rare[Math.floor(Math.random()*rare.length)]:CARD_KEYS[Math.floor(Math.random()*CARD_KEYS.length)];
+      (p.cards=cards).push(k); cutin('ui3/b_gift',p,`${BINBO_NAME}が照れながら<br>${CARDS[k].n}をくれた！`,0,true,false,{fb:'binbo/front'}); addChat('👾','#888',`${BINBO_NAME}：${p.name} に ${CARDS[k].n} をプレゼント（気まぐれ）`); return true; }
+    const amt=Math.max(1000,Math.round(A*0.05/100)*100); p.money+=amt; cutin('ui3/b_gift',p,`${BINBO_NAME}が照れながら<br>おこづかいをくれた！`,amt,true,false,{fb:'binbo/front'}); addChat('👾','#888',`${BINBO_NAME}：${p.name} に ${yen(amt)} をプレゼント（気まぐれ）`); return true; }
   if(r<0.10){ cutin('ui2/b_sleep',p,`${BINBO_NAME}は<br>今日は気分が乗らないらしい…`,0,true); addChat('👾','#888',`${BINBO_NAME}：${p.name} に取りついているが、今日は何もしなかった（気まぐれ）`); return true; }
   if(r<0.35 && mine.length){ // 高い物件から勝手に手放す。資産が多いほど件数が増える
     const cnt=Math.max(1,Math.min(3,Math.round(A/40000*rf))); mine.sort((a,b)=>b.pr.price-a.pr.price); const sold=mine.slice(0,cnt);
@@ -969,21 +1008,44 @@ function rankWatch(){ if(state.players.length<2) return; const L=state.players.s
     if(state.lastLeader && state.lastLeader!==top.id){ cutin('ui2/crown',top,'逆転！<br>トップに躍り出た！',0,true); addChat('👑','#888',`${top.name} がトップに浮上！`); }
     if(state.lastLast && state.lastLast!==last.id){ const up=P(state.lastLast); if(up) cutin('ui2/mud',up,'最下位から<br>脱出！',0,true); } }
   state.lastLeader=top.id; state.lastLast=last.id; }
+function titleCheck(){ state.titles=state.titles||{}; const C={}; state.players.forEach(p=>C[p.id]=grpCount(p.id));
+  for(const g of PGROUPS){ const cur=state.titles[g.k]; const best=Math.max(0,...state.players.map(p=>C[p.id][g.k]||0));
+    if(best<3){ if(cur){ delete state.titles[g.k]; addChat(g.ic,'#888',`「${g.n}」の称号は空位になった`); } continue; }
+    if(cur && (C[cur]?.[g.k]||0)===best) continue;
+    const w=state.players.find(p=>(C[p.id][g.k]||0)===best); state.titles[g.k]=w.id;
+    cutin('ui3/t_'+g.k,w,`${g.ic}「${g.n}」の<br>称号を獲得！`,0,true,false,{dur:2200,fb:'ui2/crown'});
+    toast(`${g.ic} ${w.name} が「${g.n}」に！<br>${g.t}物件の収益2倍`); addChat(g.ic,'#888',`${w.name} が「${g.n}」の称号を獲得（${g.t} ${best}件）`); } }
+const RICH=[[20000,'rich2','2億'],[50000,'rich5','5億'],[100000,'rich10','10億']];
+function richCheck(){ state.players.forEach(p=>{ for(let i=RICH.length-1;i>=0;i--){ const [th,key,lb]=RICH[i]; if(p.money>=th && (p.richLv||0)<=i){ p.richLv=i+1;
+  cutin('ui3/'+key,p,`所持金${lb}円<br>突破！`,0,true,false,{dur:2000,fb:'ui2/coins'}); addChat('💴','#888',`${p.name} の所持金が${lb}円を突破！`); break; } } }); }
+function seasonChange(){ const se=seasonOf(); if(state.season===se) return; state.season=se; const S=SEASONS[se];
+  cutin('ui3/s_'+se,null,`${S.ic}${S.n}がやってきた！`,0,true,false,{dur:2000,fb:'cuts/fest'}); toast(`${S.ic} ${calMonth()}月・${S.n}<br>${S.d}`); addChat(S.ic,'#888',`${S.n}になった：${S.d}`); }
+function makeNews(){ if(state.news || Math.random()>0.45) return; const nextSettle=Math.ceil((state.month+1)/SETTLE_EVERY)*SETTLE_EVERY; const t=Math.random(); let nw;
+  if(t<0.4){ const owned=[...new Set(Object.keys(state.owners).map(k=>+k.split('-')[0]))]; const pool=owned.length&&Math.random()<0.7?owned:ST.filter(x=>x.kind==='st'&&x.tier>0).map(x=>x.i);
+    const st=pool[Math.floor(Math.random()*pool.length)]; nw={type:'boom',st,good:true,txt:`${ST[st].n}駅が空前の大ブーム！`,eff:`${ST[st].n}の物件収益2倍`}; }
+  else { const regs=Object.keys(REG_N), reg=regs[Math.floor(Math.random()*regs.length)];
+    nw= t<0.7 ? {type:'quake',reg,good:false,txt:`${REG_N[reg]}地方で大地震！`,eff:`${REG_N[reg]}の物件収益半減`} : {type:'tour',reg,good:true,txt:`${REG_N[reg]}に観光客が殺到！`,eff:`${REG_N[reg]}の物件収益1.5倍`}; }
+  nw.until=nextSettle; state.news=nw;
+  cutin(nw.good?'ui3/news_good':'ui3/news_bad',null,`【臨時ニュース】<br>${nw.txt}`,0,nw.good,false,{dur:2600,fb:nw.good?'cuts/b3':'cuts/r1'});
+  toast(`📰 臨時ニュース！<br>${nw.txt}<br>次の決算まで ${nw.eff}`); addChat('📰','#888',`臨時ニュース：${nw.txt}（次の決算まで${nw.eff}）`); }
 function endTurn(){
+  if(state.goalsDone>=state.goalN && !state.finalSettled){ state.finalSettled=true;
+    cutin('ui3/finalsettle',null,'運命の<br>最終決算！',0,true,false,{big:1,dur:2400,fb:'cuts/settle'}); doSettle(true); richCheck(); state.phase='settle'; commit(); setTimeout(endGame,9000); return; }
   if(state.goalsDone>=state.goalN) return endGame();
+  titleCheck(); richCheck();
   rankWatch();
   { const c=curP(); if(state.binbo && c && state.binbo.pid===c.id && state.binbo.acted!==state.turnNo){ state.binbo.acted=state.turnNo; binboAct(c); state.phase='binbo'; commit(); setTimeout(endTurn,2600); return; } }
   const n=state.players.length; let i=state.cur;
   for(let t=0;t<n;t++){ i=(i+1)%n; if(!state.players[i].finished) break; }
   // 全員が1周したら1ヶ月進む
-  let settled=false; if(i<=state.cur){ state.month++; if(state.month%SETTLE_EVERY===0){ doSettle(); settled=true; } }
+  let settled=false; if(i<=state.cur){ state.month++; seasonChange(); if(state.month%SETTLE_EVERY===0){ doSettle(); settled=true; richCheck(); } else makeNews(); }
   const go=()=>{ if(state.pendingRoulette) doRoulette(()=>beginTurn(i)); else beginTurn(i); };
   if(settled){ state.phase='settle'; commit(); setTimeout(go,6500); }
   else go();
 }
-function doSettle(){
+function doSettle(fin){
   const rows=state.players.map(p=>{ const inc=income(p); p.money+=inc; return {id:p.id,n:p.name,c:p.color,inc,m:p.money,a:assets(p)}; }).sort((a,b)=>b.a-a.a);
-  state.settle={seq:(state.settle?.seq||0)+1,month:state.month,rows}; cutin('settle',null,`${state.month}ヶ月目の決算！`,0,true);
+  state.settle={seq:(state.settle?.seq||0)+1,month:state.month,rows,fin:!!fin}; if(!fin) cutin('settle',null,`${state.month}ヶ月目の決算！`,0,true); state.news=null;
   state.msg=`📊 ${state.month}ヶ月目の決算！`;
 }
 function endGame(){
@@ -1276,7 +1338,7 @@ function render(){
   $('plist').classList.toggle('hidden',!listMini); $('plist').classList.remove('slim');
   const head=`<div class="head"><span>🏁 ${state.goalsDone}/${state.goalN}</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>`;
   if(false) $('plist').innerHTML=head+`<div class="strip">`+state.players.map((p,i)=>`<div class="pc ${i===state.cur&&state.phase!=='end'?'cur':''}"><span class="dot" style="background:${p.color}"></span><span class="nm">${esc(p.name)}</span><b class="${p.money<0?'neg':''}">${yenS(p.money)}</b></div>`).join('')+`</div>`;
-  else $('plist').innerHTML=`<div class="head"><span>📅 ${state.month}ヶ月目</span><span>🏁 目的地 ${state.goalsDone}/${state.goalN}${isHost?` <button class="gbtn" data-goal="-1">−</button><button class="gbtn" data-goal="1">＋</button>`:''}</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>`+
+  else $('plist').innerHTML=`<div class="head"><span>📅 ${state.month}ヶ月目（${calMonth()}月${SEASONS[seasonOf()].ic}）</span><span>🏁 目的地 ${state.goalsDone}/${state.goalN}${isHost?` <button class="gbtn" data-goal="-1">−</button><button class="gbtn" data-goal="1">＋</button>`:''}</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>${state.news?`<div class="newsl ${state.news.good?'g':'b'}">📰 ${esc(state.news.eff)}（次の決算まで）</div>`:''}${Object.keys(state.titles||{}).length?`<div class="titl">${Object.entries(state.titles).map(([g,id])=>{ const q=P(id); return q?`<span style="background:${q.color}">${PG[g].ic}${PG[g].n}：${esc(q.name)}</span>`:''; }).join('')}</div>`:''}`
    state.players.map((p,i)=>`<div class="row ${i===state.cur&&state.phase!=='end'?'cur':''}"><img class="pic" src="${iconOf(p)}" style="border-color:${p.color}"><span class="nm">${p.away?'📶':p.cpu?'🤖':''}${esc(p.name)}${state.binbo&&state.binbo.pid===p.id?'👾':''}</span>
    <span>${ST[p.pos].n}</span><span class="left">${state.dest!=null?'(あと'+DD()[p.pos]+')':''}</span>${p.rest?'🌀':''}${p.express?'🎫':''}${p.lucky?'🍀':''}
    ${(p.cards||[]).length?`<span title="カード">🃏${p.cards.length}</span>`:''}<span class="mon ${p.money<0?'neg':''}">${yen(p.money)}</span></div>`).join('')+`<div class="more">タップで閉じる</div>`;
@@ -1461,10 +1523,14 @@ BAND_OF.forEach(k=>{ const a=new Image(); a.src='ui/band_'+k+'.webp'; const b=ne
 let lastCutId=null, cutQ=[], cutBusy=false, toastHold=null;
 function feedCutins(c){ if(lastCutId===null){ lastCutId=c?c.n:0; return; } if(!c) return; c.items.filter(it=>it.id>lastCutId).forEach(it=>{ const L=cutQ[cutQ.length-1]; if(L&&L.img==='ui/buy'&&it.img==='ui/buy'&&L.who===it.who){ L.n=(L.n||1)+1; L.amt+=it.amt; L.ttl=`物件を${L.n}件<br>購入！`; } else cutQ.push({...it}); }); lastCutId=c.n; if(!cutBusy) playCut(); }
 const SMALL_CUT=new Set(['ui2/map','ui/ok','ui/ng','ui/buy','ui/toll','ui/stealfail','express','typhoon','fest']);
-const CUT_SND={'ui2/goal':'fanfare','ui2/bonus':'coin','ui2/b_fall':'binbo','ui2/b_chase':'binbo','ui2/b_rage':'binbo','ui2/b_sleep':'pop','ui2/b_broom':'good','ui2/streak':'good','ui2/crown':'fanfare','ui2/mud':'good','ui2/coins':'coin','ui2/card':'card','ui2/stolen':'bad','ui2/passby':'ng','ui2/seized':'lose','ui2/map':'stop','ui/ok':'ok','ui/ng':'ng','ui/buy':'coin','ui/toll':'lose','ui/stealfail':'ng',express:'card',typhoon:'bad',fest:'coin',arrive:'fanfare',mono:'fanfare',steal:'good',settle:'coin','ui/startband':'fanfare','ui/lastmonth':'turn','binbo/front':'binbo'};
+const CUT_SND={'ui3/b_gift':'good','ui3/news_good':'turn','ui3/news_bad':'bad','ui3/lastdest':'fanfare','ui3/finalsettle':'fanfare','ui3/rich2':'coin','ui3/rich5':'coin','ui3/rich10':'fanfare','ui3/s_spring':'good','ui3/s_summer':'good','ui3/s_autumn':'good','ui3/s_winter':'ng','ui2/goal':'fanfare','ui2/bonus':'coin','ui2/b_fall':'binbo','ui2/b_chase':'binbo','ui2/b_rage':'binbo','ui2/b_sleep':'pop','ui2/b_broom':'good','ui2/streak':'good','ui2/crown':'fanfare','ui2/mud':'good','ui2/coins':'coin','ui2/card':'card','ui2/stolen':'bad','ui2/passby':'ng','ui2/seized':'lose','ui2/map':'stop','ui/ok':'ok','ui/ng':'ng','ui/buy':'coin','ui/toll':'lose','ui/stealfail':'ng',express:'card',typhoon:'bad',fest:'coin',arrive:'fanfare',mono:'fanfare',steal:'good',settle:'coin','ui/startband':'fanfare','ui/lastmonth':'turn','binbo/front':'binbo'};
 function cutSound(it){ const k=CUT_SND[it.img]||(/^b\d/.test(it.img)?'good':/^r\d/.test(it.img)?'bad':(it.good?'good':'bad')); SFX.play(k); }
+const IMG_MISS=new Set();
+const UI3=['t_'+'ramen','b_gift','s_spring','s_summer','s_autumn','s_winter','news_good','news_bad','lastdest','rich2','rich5','rich10','finalsettle'];
+['ramen','onsen','cafe','sushi','soba','sweets','craft','sake','farm','meat','castle','port','build'].map(k=>'t_'+k).concat(UI3.slice(1)).forEach(k=>{ const im=new Image(); im.onerror=()=>IMG_MISS.add('ui3/'+k); im.src='ui3/'+k+'.webp'; });
+function cimg(it){ let i=it.img; if(IMG_MISS.has(i)&&it.fb) i=it.fb; return (i.includes('/')?i:'cuts/'+i)+'.webp'; }
 function playMini(it){ cutSound(it); const el=$('minicut'); const a=it.amt? (it.amt>0?'+':'−')+yenS(Math.abs(it.amt)) : '';
-  el.innerHTML=`<img src="${it.img.includes('/')?it.img:'cuts/'+it.img}.webp" alt=""><div class="mt">${it.who?`<span class="mw" style="background:${it.col}">${esc(it.who)}</span>`:''}<div class="mtt">${it.ttl.replace(/<br>/g,' ')}</div></div>${a?`<div class="ma ${it.amt>0?'p':'m'}">${a}</div>`:''}`;
+  el.innerHTML=`<img src="${cimg(it)}" alt=""><div class="mt">${it.who?`<span class="mw" style="background:${it.col}">${esc(it.who)}</span>`:''}<div class="mtt">${it.ttl.replace(/<br>/g,' ')}</div></div>${a?`<div class="ma ${it.amt>0?'p':'m'}">${a}</div>`:''}`;
   el.className=it.good?'good':'bad'; void el.offsetWidth; el.classList.add('on');
   setTimeout(()=>{ el.classList.add('out'); setTimeout(playCut,180); },cutQ.length>2?520:820); }
 function playCut(){ const el=$('cutin'); const it=cutQ.shift();
@@ -1474,14 +1540,14 @@ function playCut(){ const el=$('cutin'); const it=cutQ.shift();
   $('minicut').className='hidden';
   if(!it){ cutBusy=false; el.className='hidden'; if(toastHold){ const h=toastHold; toastHold=null; showToast(h); } return; }
   cutBusy=true; cutSound(it); const a=it.amt? (it.amt>0?'+':'−')+yenS(Math.abs(it.amt)) : '';
-  el.innerHTML=`<div class="band"></div><div class="ccard"><img src="${it.img.includes('/')?it.img:'cuts/'+it.img}.webp" alt=""><div class="txt">${it.who?`<span class="who" style="background:${it.col}">${esc(it.who)}</span>`:''}<div class="ttl">${it.ttl}</div>${a?`<div class="amt">${a}</div>`:''}</div></div>`;
+  el.innerHTML=`<div class="band"></div><div class="ccard"><img src="${cimg(it)}" alt=""><div class="txt">${it.who?`<span class="who" style="background:${it.col}">${esc(it.who)}</span>`:''}<div class="ttl">${it.ttl}</div>${a?`<div class="amt">${a}</div>`:''}</div></div>`;
   el.className=it.good?'good':'bad'; void el.offsetWidth; el.classList.add('on');
   if(!it.good){ const g=$('game'); g.classList.remove('shake'); void g.offsetWidth; g.classList.add('shake'); }
   const dur=it.dur||(cutQ.length>2?1100:1600);
   setTimeout(()=>{ el.classList.add('out'); setTimeout(playCut,330); },dur);
 }
 function playBig(it){ const el=$('cutin'); cutBusy=true; cutSound(it); const a=it.amt? (it.amt>0?'+':'−')+yen(Math.abs(it.amt)) : '';
-  el.innerHTML=`<div class="bigbg"></div><div class="bigc"><div class="bimgw"><img src="${it.img}.webp" alt="">${it.ov&&a?`<div class="bov">${a}</div>`:''}</div>
+  el.innerHTML=`<div class="bigbg"></div><div class="bigc"><div class="bimgw"><img src="${cimg(it)}" alt="">${it.ov&&a?`<div class="bov">${a}</div>`:''}</div>
     <div class="btxt">${it.who?`<span class="who" style="background:${it.col}">${esc(it.who)}</span>`:''}<div class="bttl">${it.ttl}</div>${a&&!it.ov?`<div class="amt">${a}</div>`:''}</div></div>`;
   el.className='big good'; void el.offsetWidth; el.classList.add('on');
   if(it.img==='ui2/goal') confettiBurst();
@@ -1557,12 +1623,12 @@ function renderModal(myTurn){
     ${rev&&side&&my&&my.c!==q.ans?`<div class="sub">🤫 こっそり回答はハズレ…</div>`:''}
     <div class="repwrap">${reported[q.id]?'<span class="repdone">🚩 報告しました。ありがとう！</span>':repOpen===q.id?`<div class="reps">${REP_REASONS.map((r,i)=>`<button data-rep="${i}">${r}</button>`).join('')}</div>`:'<button class="rep" data-repopen="1">🚩 この問題おかしい？</button>'}</div>`;
   } else if(state.phase==='buy'){
-    const s=p.pos, st=ST[s], mine=myTurn;
+    const s=p.pos, st=ST[s], mine=myTurn, gc=grpCount(p.id);
     html=`<h2>🏢 ${st.n} の物件</h2><div class="sub">所持金 ${yen(p.money)}／収益は${SETTLE_EVERY}ヶ月ごとの決算で入る</div>`+
       `<div class="props">`+st.props.map((pr,k)=>{ const o=ownerOf(s,k), op=o&&P(o);
         const btn = o ? `<span class="owner" style="background:${op?.color||'#888'}">${esc(op?.name||'')}</span>`
           : mine ? `<button class="btn" data-buy="${k}" ${p.money<pr.price?'disabled':''}>購入</button>` : `<span class="sub">空き</span>`;
-        return `<div class="prop"><div class="info"><div class="pn">${esc(pr.nm)}</div><div class="pp">${yen(pr.price)}・収益${pr.rate}%</div></div>${btn}</div>`; }).join('')+`</div>`+
+        return `<div class="prop"><div class="info"><div class="pn">${esc(pr.nm)}${pr.g?` <span class="gtag">${PG[pr.g].ic}${PG[pr.g].t} ${gc[pr.g]||0}/3</span>`:''}</div><div class="pp">${yen(pr.price)}・収益${pr.rate}%</div></div>${btn}</div>`; }).join('')+`</div>`+
       (mine?`<div class="stack"><button class="btn gray" data-endbuy="1">購入を終える</button></div>`:`<div class="sub">${esc(p.name)} が検討中…</div>`)+
       `<div class="sub">全部そろえると👑独占（収益・通行料2倍）</div>`;
   } else if(state.phase==='steal' || state.phase==='stealbuy'){
@@ -1577,7 +1643,7 @@ function renderModal(myTurn){
        : (mine?`<div class="stack"><button class="btn gray" data-endbuy="1">買い取らずに終える</button></div>`:`<div class="sub">${esc(p.name)} がどれを買い取るか検討中…</div>`));
   } else if(state.phase==='settle' && state.settle){
     center=true; const s=state.settle;
-    html=`<div class="mhero" style="background-image:url(ui/settlebg.webp)"><span>📊 ${s.month}ヶ月目 決算</span></div>
+    html=`<div class="mhero" style="background-image:url(ui/settlebg.webp)"><span>${s.fin?'🔥 運命の最終決算':`📊 ${s.month}ヶ月目 決算`}</span></div>
       <table class="stb"><thead><tr><th></th><th>名前</th><th>収支</th><th>所持金</th><th>総資産</th></tr></thead><tbody>`+s.rows.map((r,i)=>{ const pp=state.players.find(x=>x.id===r.id)||state.players.find(x=>x.name===r.n);
         return `<tr class="${i?'':'top'}"><td class="no">${['🥇','🥈','🥉'][i]||(i+1)}</td><td class="nm"><img class="rkic" src="${pp?iconOf(pp):'ui/icon0.webp'}" style="border-color:${r.c}"><span>${esc(r.n)}</span></td><td class="inc">+${yenS(r.inc)}</td><td class="${(r.m??0)<0?'neg':''}">${r.m!=null?yenS(r.m):'-'}</td><td class="tot">${r.a!=null?yenS(r.a):'-'}</td></tr>`; }).join('')+`</tbody></table><div class="sub">総資産＝所持金＋持っている物件の価格</div>`;
   } else if(state.phase==='end' && state.result && false){
@@ -2088,7 +2154,7 @@ cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
 cv.addEventListener('wheel',e=>{ e.preventDefault(); cam.tz=Math.max(0.15,Math.min(3,cam.tz*(e.deltaY<0?1.1:0.9))); },{passive:false});
 
 // テスト用フック
-window.__gdt={cutin,arrive,commit,moveTick,get state(){return state;},ST,NEXT:ADJ,get DIST(){return DD();},DD,act,startHost,cam,cpuCheck,doRoulette};
+window.__gdt={cutin,arrive,commit,endTurn,makeNews,moveTick,get state(){return state;},ST,NEXT:ADJ,get DIST(){return DD();},DD,act,startHost,cam,cpuCheck,doRoulette};
 </script>
 </body>
 </html>
