@@ -178,8 +178,8 @@ button{font-family:inherit;cursor:pointer;border:0}
 #minicut .mtt{font-size:15px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #minicut .ma{font-size:20px;font-weight:bold;white-space:nowrap;margin-left:4px}#minicut .ma.p{color:#d08a00}#minicut .ma.m{color:#d03030}
 #minicut.hidden{display:none}
-#toast{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%) scale(.6);background:#fff;border:3px solid var(--or);border-radius:16px;padding:12px 18px;font-size:18px;text-align:center;z-index:25;opacity:0;transition:.25s;pointer-events:none;max-width:88vw;box-shadow:0 6px 18px rgba(0,0,0,.3)}
-#toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#toast{position:fixed;left:50%;top:calc(118px + env(safe-area-inset-top));transform:translate(-50%,-10px) scale(.9);font-size:15px !important;background:#fff;border:3px solid var(--or);border-radius:16px;padding:12px 18px;font-size:18px;text-align:center;z-index:25;opacity:0;transition:.25s;pointer-events:none;max-width:88vw;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+#toast.show{opacity:1;transform:translate(-50%,0) scale(1)}
 #modal{position:fixed;inset:0;display:flex;align-items:flex-end;justify-content:center;z-index:15;pointer-events:none;padding:0 10px calc(78px + env(safe-area-inset-bottom))}
 #modal.center{align-items:center;background:rgba(0,0,0,.35);pointer-events:auto}
 .card{pointer-events:auto;background:var(--paper);border:4px solid #2b2420;border-radius:20px;padding:14px;width:100%;max-width:480px;box-shadow:0 8px 0 rgba(0,0,0,.25);max-height:72vh;overflow:auto}
@@ -540,7 +540,13 @@ function rankOf(p){ const L=state.players.slice().sort((a,b)=>assets(b)-assets(a
 function isLast(p){ return state.players.length>1 && rankOf(p)===state.players.length-1; }
 function cardRate(p){ const n=state.players.length; return n<2?1:1-0.5*rankOf(p)/(n-1); }
 function cardPrice(p,k){ return Math.round(CARDS[k].price*cardRate(p)/100)*100; }
-const SIDE_PRIZE=100; // こっそり回答の賞金（万円）×難易度
+const SIDE_PRIZE=100; // こっそり回答の賞金（万円）×難易度×景気
+// 景気：全員の平均総資産に合わせて、イベントの収支・到着ボーナス・通行料・賞金が大きくなる（物件とカードの値段は固定）
+function econ(){ if(!state||!state.players||!state.players.length) return 1; const L=state.players.filter(p=>!p.finished); const av=(L.length?L:state.players).reduce((a,p)=>a+Math.max(0,assets(p)),0)/Math.max(1,(L.length?L:state.players).length);
+  return Math.round(Math.min(6,Math.max(1,Math.pow(av/START_MONEY,0.7)))*10)/10; }
+function econOf(p){ return Math.min(econ(), Math.max(1,Math.round(Math.pow(Math.max(0,assets(p))/START_MONEY,0.7)*12)/10)); } // 損失は本人の資産も考慮（貧しい人ほど軽く）
+function r100(v){ return Math.round(v/100)*100; }
+function sidePrize(lv){ return r100(SIDE_PRIZE*lv*econ()); }
 const RATE = {1:[30,30,20,15,10],2:[30,30,30,30,20,15,10],3:[30,30,30,30,30,30,30,20,15,10]}; // 決算ごとの収益率(%)
 const START_MONEY = 10000;        // 1億円
 const GOAL_BONUS = 5000;
@@ -702,7 +708,10 @@ function commit(){
   if(isHost){ const msg={t:'state',s:state}; conns.forEach(c=>{try{c.open&&c.send(msg);}catch(e){}}); cpuCheck(); }
 }
 function toast(text,to){ state.toast={seq:(state.toast?.seq||0)+1,items:Array.isArray(text)?text:[{t:text,to:to||null}]}; }
-function cutin(img,p,ttl,amt,good,priv,opt){ const c=state.cutin||{n:0,items:[]}; c.n++; c.items=[...c.items.slice(-9),Object.assign({id:c.n,pid:priv&&p?p.id:null,img,who:p?p.name:'',col:p?p.color:'#888',ttl,amt:amt||0,good:!!good},opt||{})]; state.cutin=c; }
+function cutin(img,p,ttl,amt,good,priv,opt){ const c=state.cutin||{n:0,items:[]}; c.n++; c.items=[...c.items.slice(-15),Object.assign({id:c.n,pid:priv&&p?p.id:null,img,who:p?p.name:'',col:p?p.color:'#888',ttl,amt:amt||0,good:!!good},opt||{})]; state.cutin=c; const it=c.items[c.items.length-1]; cutEnd=Math.max(cutEnd,Date.now())+cutEst(it); }
+let cutEnd=0;
+function cutEst(it){ if(window.__nocutwait) return 0; if(it.pause) return it.pause; if(it.big) return (it.dur||2200)+400; if(SMALL_CUT.has(it.img)) return 900; return (it.dur||1600)+330; }
+function afterCuts(fn,min){ const w=Math.max(min||0, cutEnd-Date.now()+300); return setTimeout(fn,w); }
 function cutPause(ms){ cutin('',null,'',0,true,false,{pause:ms}); }
 function regionOf(i){ const s=ST[i]; if(!s) return 'kanto'; const la=s.la, lo=s.lo;
   if(la>=41.4) return 'hokkaido'; if(lo<131.8||la<32) return 'kyushu'; if(la>=37.0&&lo>=139.5) return 'tohoku';
@@ -737,7 +746,7 @@ function beginTurn(i){
   state.cur=i; state.phase='roll'; state.dice=null; state.quiz=null; state.moves=null; state.chooser=null;
   const p=curP();
   if(p.rest>0){ p.rest--; state.phase='rest'; state.msg=`🌀 ${p.name} は今回の手番お休み`;
-    cutin('typhoon',p,'今回の手番は<br>お休み…',0,false); addChat('🌀','#888',`${p.name} は手番お休み`); commit(); setTimeout(endTurn,2600); return; }
+    cutin('typhoon',p,'今回の手番は<br>お休み…',0,false); addChat('🌀','#888',`${p.name} は手番お休み`); commit(); afterCuts(endTurn,2600); return; }
   state.msg=`${p.name} の手番！サイコロを振ってください`;
 
   commit();
@@ -807,7 +816,7 @@ function doRoll(p){
   state.dice=ds; state.diceSeq++; state.steps=sum; state.phase='rolled';
   let gi=nd>1?Math.min(6,Math.ceil(sum/nd)):ds[0]; if(gi===2&&!state.adult) gi=1; const g=GENRES[gi];
   state.msg=`出目は ${sum}！ジャンルは ${g.i}${g.n}`;
-  commit(); setTimeout(startQuiz,2600);
+  commit(); afterCuts(startQuiz,2600);
 }
 function pickQ(target,g){
   const all=QPOOL.filter(q=>q.g===g);
@@ -835,7 +844,7 @@ function startQuiz(){
   const removed=shuffle([0,1,2,3].filter(i=>i!==ans)).slice(0,2);
   state.quizSeq=(state.quizSeq||0)+1;
   state.quiz={id:state.quizSeq,q:src[0],choices,ans,st:st.n,d,lv,limit:QUIZ_SEC,answers:{},order:0,
-    hint:p.lucky?[p.id]:[],removed,revealed:false};
+    hint:p.lucky?[p.id]:[],removed,revealed:false,sp:sidePrize(lv)};
   state.phase='quiz'; state.msg=`【${st.n}の${GENRES[lv].i}${GENRES[lv].n}】${p.name} が挑戦！`;
   commit();
   clearTimeout(quizTimer); quizTimer=setTimeout(revealQuiz,QUIZ_SEC*1000+2500);
@@ -858,12 +867,12 @@ function revealQuiz(){
   addChat('❓','#888',`${p.name}：正解「${q.choices[q.ans]}」 ${okN.length?'⭕':'❌'}`);
   if(okN.length&&q.snow){ cutin('ui3/s_winter',p,'大雪で<br>1マス減速…',0,false,false,{fb:'cuts/typhoon'}); addChat('⛄','#888',`${p.name}：北海道の大雪で${d-1}マスに減速`); }
   if(okN.length&&p.streak>=3&&p.streak%3===0) cutin('ui2/streak',p,`${p.streak}問連続正解！<br>${d}マス進む`,0,true); else if(okN.length) cutin('ui/ok',p,`正解！<br>${d}マス進む`,0,true); else cutin('ui/ng',p,'不正解…<br>その場にとどまる',0,false);
-  const prize=SIDE_PRIZE*q.lv; q.side=[];
+  const prize=q.sp||sidePrize(q.lv); q.side=[];
   active().forEach(x=>{ if(x===p) return; const a=q.answers[x.id]; if(a&&a.c===q.ans){ x.money+=prize; x.sideOk=(x.sideOk||0)+1; q.side.push(x.name); } });
   q.prize=prize; { const waiting=active().filter(x=>x!==p&&!x.cpu||x!==p&&x.cpu); if(q.side.length>=2&&q.side.length===waiting.length) cutin('ui2/coins',null,'待ってる全員が<br>こっそり正解！',prize,true); }
   if(q.side.length){ const ws=active().filter(x=>q.side.includes(x.name)); state.sideNote={seq:(state.sideNote?.seq||0)+1,prize,items:ws.map(x=>({n:x.name,c:x.color}))}; }
   commit();
-  setTimeout(()=>{ state.phase='moving'; commit(); setTimeout(moveTick,300); },2600);
+  afterCuts(()=>{ state.phase='moving'; commit(); setTimeout(moveTick,300); },2600);
 }
 // ---- 移動（桃鉄式：進行方向は自由。同じ移動中に来た道は戻れない） ----
 function optsAt(pos,prev){ let o=ADJ[pos].filter(x=>x!==prev); if(!o.length) o=ADJ[pos].slice(); return o; }
@@ -904,7 +913,7 @@ function moveTick(){
 const EV_BLUE=['宝くじが当たった','株が値上がりした','ご当地グルメが大ヒット','観光客が殺到した','古い壺が高く売れた','クイズ番組で賞金ゲット','副業がバズった','温泉を掘り当てた'];
 const EV_RED=['財布を落とした','台風で物件を修理','税務調査が入った','高級料亭で散財','スピード違反で罰金','詐欺にあった','新幹線を乗り過ごして宿泊','お土産を買いすぎた'];
 function arrive(p){
-  const bonus=Math.round((1500+(state.tripLen||16)*200)/100)*100;
+  const bonus=r100((1500+(state.tripLen||16)*200)*(1+0.4*(state.goalsDone||0))*econ());
   p.money+=bonus; p.arrivals=(p.arrivals||0)+1; state.goalsDone=(state.goalsDone||0)+1; state.pendingRoulette=true;
   const dn=ST[state.dest].n;
   cutin('ui2/goal',p,`${dn}に<br>到着！`,0,true,false,{big:1,dur:2300});
@@ -929,7 +938,7 @@ function doRoulette(next){
   setTimeout(()=>{ state.destFrom=from; state.dest=pick.i; state.tripLen=Math.round(avg(pick.i)); state.pendingRoulette=false;
     if(state.goalsDone===state.goalN-1) cutin('ui3/lastdest',null,'いよいよ<br>最後の目的地！',0,true,false,{big:1,dur:2400,fb:'ui/lastmonth'});
     cutin('ui2/map',null,`次の目的地は<br>${pick.n}！`,0,true);
-    state.msg=`🎯 次の目的地は「${pick.n}」！`; addChat('🎯','#888',`次の目的地は ${pick.n}（${state.tripLen}マス先）`); commit(); setTimeout(next,1600); },3600);
+    state.msg=`🎯 次の目的地は「${pick.n}」！`; addChat('🎯','#888',`次の目的地は ${pick.n}（${state.tripLen}マス先）`); commit(); afterCuts(next,1600); },3600);
 }
 function PL(to,t){ return {t,to}; }
 function afterMove(){
@@ -937,12 +946,12 @@ function afterMove(){
   for(const p of state.players){
     const m=state.moves[p.id]; if(!m||m.dir===0||p.finished) continue;
     const s=p.pos, mono=monopolist(s), paid={};
-    for(const k of pidx(s)){ const o=ownerOf(s,k); if(o && o!==p.id){ paid[o]=(paid[o]||0)+Math.round(ST[s].props[k].price*0.05*(mono===o?2:1)); } }
+    for(const k of pidx(s)){ const o=ownerOf(s,k); if(o && o!==p.id){ paid[o]=(paid[o]||0)+r100(ST[s].props[k].price*0.05*(mono===o?2:1)*econ()); } }
     for(const o in paid){ const op=P(o); p.money-=paid[o]; if(op) op.money+=paid[o]; cutin('ui/toll',p,`${op?esc(op.name):''}に<br>通行料`,-paid[o],false); lines.push(PL([p.id,o],`💸 ${p.name}→${op?op.name:'?'} 通行料${yen(paid[o])}`+(mono===o?'（独占2倍）':''))); }
   }
   for(const p of state.players){
     const m=state.moves[p.id]; if(!m||m.dir===0) continue; const k=ST[p.pos].ev;
-    if(k==='blue'||k==='red'){ const amt=Math.round((3+Math.floor(Math.random()*18))*100*(1+state.month/30)/100)*100;
+    if(k==='blue'||k==='red'){ const amt=r100((3+Math.floor(Math.random()*18))*100*(k==='red'?econOf(p):econ()));
       const ev=(k==='blue'?EV_BLUE:EV_RED)[Math.floor(Math.random()*(k==='blue'?EV_BLUE:EV_RED).length)];
       const ei=(k==='blue'?EV_BLUE:EV_RED).indexOf(ev);
       if(k==='blue'){ p.money+=amt; lines.push(PL([p.id],`🔵 ${p.name}：${ev}！ +${yen(amt)}`)); cutin('b'+ei,p,ev+'！',amt,true,true); }
@@ -954,7 +963,7 @@ function afterMove(){
   if(!r.finished){ const x=Math.random(), ty=seasonOf()==='summer'?0.24:0.16;
     if(x<0.10 && (r.cards||[]).length<CARD_MAX){ (r.cards=r.cards||[]).push('kyuko'); lines.push(PL([r.id],`🎫 ${r.name} 急行カードをもらった！`)); cutin('express',r,'急行カードを<br>もらった！',0,true,true); }
     else if(x<ty){ r.rest=1; lines.push(PL(null,`🌀 ${r.name} 台風接近！次の手番はお休み`)); cutin('typhoon',r,(seasonOf()==='summer'?'夏の':'')+'台風接近！<br>次の手番はお休み',0,false); }
-    else if(x<ty+0.10 && ST[r.pos].kind==='st'){ const b=(5+Math.floor(Math.random()*16))*100; r.money+=b; lines.push(PL([r.id],`🎉 ${r.name} ${ST[r.pos].n}のご当地祭りで${yen(b)}の臨時収入`)); cutin('fest',r,`${ST[r.pos].n}の<br>ご当地祭り！`,b,true,true); }
+    else if(x<ty+0.10 && ST[r.pos].kind==='st'){ const b=r100((5+Math.floor(Math.random()*16))*100*econ()); r.money+=b; lines.push(PL([r.id],`🎉 ${r.name} ${ST[r.pos].n}のご当地祭りで${yen(b)}の臨時収入`)); cutin('fest',r,`${ST[r.pos].n}の<br>ご当地祭り！`,b,true,true); }
   }
   if(lines.length){ toast(lines); lines.forEach(l=>addChat('📢','#888',strip(l.t))); }
   state.moves=null;
@@ -966,7 +975,7 @@ function afterMove(){
     commit(); }
   else if(canBuy){ state.phase='buy'; state.msg=`⭕ 正解した ${r.name} は ${ST[r.pos].n} の物件を購入できます`; commit(); }
   else if(mo && mo!==r.id){ state.phase='steal'; state.msg=`👑 ${ST[r.pos].n} は ${P(mo).name} の独占駅！奇数を出せば1件買い取れる`; commit(); }
-  else { commit(); setTimeout(endTurn, lines.length?2200:700); }
+  else { commit(); afterCuts(endTurn, lines.length?2200:700); }
 }
 function doBuy(p,k){
   const s=p.pos, pr=ST[s].props[k];
@@ -1003,10 +1012,10 @@ function binboAct(p){
   if(r<0.45 && cards.length){ const k=cards.splice(Math.floor(Math.random()*cards.length),1)[0];
     const amt=Math.round(A*0.02*rf/100)*100; p.money-=amt;
     return say(`${BINBO_NAME}が${CARDS[k].n}を捨てて<br>散財した！`,-amt,`${BINBO_NAME}：${p.name} の ${CARDS[k].n} を捨て、${yen(amt)} 散財`); }
-  if(r<0.70){ const amt=Math.max(300,Math.round(A*(0.04+Math.random()*0.05)*rf/100)*100); p.money-=amt;
+  if(r<0.70){ const amt=Math.max(r100(300*econ()),Math.round(A*(0.04+Math.random()*0.05)*rf/100)*100); p.money-=amt;
     const what=['ガラクタの壺','謎の健康器具','高すぎる絵画','使わない別荘の会員権','ニセモノの宝石','巨大な金の像','誰も乗らない豪華客船'][Math.floor(Math.random()*7)];
     return say(`${BINBO_NAME}が<br>${what}を買った！`,-amt,`${BINBO_NAME}：${p.name} のお金で${what}を購入（−${yen(amt)}）`); }
-  const amt=Math.max(500,Math.round(A*(0.08+Math.random()*0.08)*rf/100)*100); p.money-=amt;
+  const amt=Math.max(r100(500*econ()),Math.round(A*(0.08+Math.random()*0.08)*rf/100)*100); p.money-=amt;
   return say(`${BINBO_NAME}が<br>お金を持ち去った！`,-amt,`${BINBO_NAME}：${p.name} から ${yen(amt)} を持ち去った`); }
 function rankWatch(){ if(state.players.length<2) return; const L=state.players.slice().sort((a,b)=>assets(b)-assets(a)); const top=L[0], last=L[L.length-1];
   if((state.turnNo||0)>state.players.length && assets(top)>assets(L[1])){
@@ -1039,14 +1048,14 @@ function endTurn(){
   if(state.goalsDone>=state.goalN) return endGame();
   titleCheck(); richCheck();
   rankWatch();
-  { const c=curP(); if(state.binbo && c && state.binbo.pid===c.id && state.binbo.acted!==state.turnNo){ state.binbo.acted=state.turnNo; binboAct(c); state.phase='binbo'; commit(); setTimeout(endTurn,2600); return; } }
+  { const c=curP(); if(state.binbo && c && state.binbo.pid===c.id && state.binbo.acted!==state.turnNo){ state.binbo.acted=state.turnNo; binboAct(c); state.phase='binbo'; commit(); afterCuts(endTurn,2600); return; } }
   const n=state.players.length; let i=state.cur;
   for(let t=0;t<n;t++){ i=(i+1)%n; if(!state.players[i].finished) break; }
   // 全員が1周したら1ヶ月進む
   let settled=false; if(i<=state.cur){ state.month++; seasonChange(); if(state.month%SETTLE_EVERY===0){ doSettle(); settled=true; richCheck(); } else makeNews(); }
   const go=()=>{ if(state.pendingRoulette) doRoulette(()=>beginTurn(i)); else beginTurn(i); };
-  if(settled){ state.phase='settle'; commit(); setTimeout(go,6500); }
-  else go();
+  if(settled){ state.phase='settle'; commit(); afterCuts(go,6500); }
+  else afterCuts(go,0);
 }
 function doSettle(fin){
   const rows=state.players.map(p=>{ const inc=income(p); p.money+=inc; return {id:p.id,n:p.name,c:p.color,inc,m:p.money,a:assets(p)}; }).sort((a,b)=>b.a-a.a);
@@ -1343,7 +1352,7 @@ function render(){
   $('plist').classList.toggle('hidden',!listMini); $('plist').classList.remove('slim');
   const head=`<div class="head"><span>🏁 ${state.goalsDone}/${state.goalN}</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>`;
   if(false) $('plist').innerHTML=head+`<div class="strip">`+state.players.map((p,i)=>`<div class="pc ${i===state.cur&&state.phase!=='end'?'cur':''}"><span class="dot" style="background:${p.color}"></span><span class="nm">${esc(p.name)}</span><b class="${p.money<0?'neg':''}">${yenS(p.money)}</b></div>`).join('')+`</div>`;
-  else $('plist').innerHTML=`<div class="head"><span>📅 ${state.month}ヶ月目（${calMonth()}月${SEASONS[seasonOf()].ic}）</span><span>🏁 目的地 ${state.goalsDone}/${state.goalN}${isHost?` <button class="gbtn" data-goal="-1">−</button><button class="gbtn" data-goal="1">＋</button>`:''}</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>${state.news?`<div class="newsl ${state.news.good?'g':'b'}">📰 ${esc(state.news.eff)}（次の決算まで）</div>`:''}${Object.keys(state.titles||{}).length?`<div class="titl">${Object.entries(state.titles).map(([g,id])=>{ const q=P(id); return q?`<span style="background:${q.color}">${PG[g].ic}${PG[g].n}：${esc(q.name)}</span>`:''; }).join('')}</div>`:''}`
+  else $('plist').innerHTML=`<div class="head"><span>📅 ${state.month}ヶ月目（${calMonth()}月${SEASONS[seasonOf()].ic}）</span><span title="景気が上がるとイベントの収支・到着ボーナス・通行料が大きくなる">💹景気×${econ().toFixed(1)}</span><span>🏁 目的地 ${state.goalsDone}/${state.goalN}${isHost?` <button class="gbtn" data-goal="-1">−</button><button class="gbtn" data-goal="1">＋</button>`:''}</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>${state.news?`<div class="newsl ${state.news.good?'g':'b'}">📰 ${esc(state.news.eff)}（次の決算まで）</div>`:''}${Object.keys(state.titles||{}).length?`<div class="titl">${Object.entries(state.titles).map(([g,id])=>{ const q=P(id); return q?`<span style="background:${q.color}">${PG[g].ic}${PG[g].n}：${esc(q.name)}</span>`:''; }).join('')}</div>`:''}`
    state.players.map((p,i)=>`<div class="row ${i===state.cur&&state.phase!=='end'?'cur':''}"><img class="pic" src="${iconOf(p)}" style="border-color:${p.color}"><span class="nm">${p.away?'📶':p.cpu?'🤖':''}${esc(p.name)}${state.binbo&&state.binbo.pid===p.id?(state.binbo.king?'👑👾':'👾'):''}</span>
    <span>${ST[p.pos].n}</span><span class="left">${state.dest!=null?'(あと'+DD()[p.pos]+')':''}</span>${p.rest?'🌀':''}${p.express?'🎫':''}${p.lucky?'🍀':''}
    ${(p.cards||[]).length?`<span title="カード">🃏${p.cards.length}</span>`:''}<span class="mon ${p.money<0?'neg':''}">${yen(p.money)}</span></div>`).join('')+`<div class="more">タップで閉じる</div>`;
@@ -1355,7 +1364,7 @@ function render(){
       B.querySelectorAll('[data-cd]').forEach(b=>b.onclick=()=>{ cardPick={i:+b.dataset.cd}; render(); }); } }
   $('actBtn').textContent = me&&me.express ? 'サイコロを振る（2個）' : 'サイコロを振る';
   // ターン切替で追従
-  if(state.cur!==lastCur && state.phase==='roll' && lastCur!==-1){ const np=curP(); if(np) showTurnCut(np); }
+  if(state.cur!==lastCur && state.phase==='roll' && lastCur!==-1){ const np=curP(); if(np){ if(cutBusy||cutQ.length) cutQ.push({turn:np.id}); else showTurnCut(np); } }
   if(state.cur!==lastCur || (state.phase==='moving'&&lastPhase!=='moving')){ follow=true; }
   if(state.phase==='roll'&&lastPhase!=='roll'&&follow) cam.tz=1.4;
   lastCur=state.cur; lastPhase=state.phase;
@@ -1539,11 +1548,12 @@ function playMini(it){ cutSound(it); const el=$('minicut'); const a=it.amt? (it.
   el.className=it.good?'good':'bad'; void el.offsetWidth; el.classList.add('on');
   setTimeout(()=>{ el.classList.add('out'); setTimeout(playCut,180); },cutQ.length>2?520:820); }
 function playCut(){ const el=$('cutin'); const it=cutQ.shift();
+  if(it && it.turn){ const tp=P(it.turn); cutBusy=true; el.className='hidden'; $('minicut').className='hidden'; if(tp) showTurnCut(tp); return setTimeout(playCut,tp?1700:0); }
   if(it && it.pause){ cutBusy=true; el.className='hidden'; $('minicut').className='hidden'; return setTimeout(playCut,it.pause); }
   if(it && it.big){ $('minicut').className='hidden'; return playBig(it); }
   if(it && SMALL_CUT.has(it.img)){ el.className='hidden'; cutBusy=true; return playMini(it); }
   $('minicut').className='hidden';
-  if(!it){ cutBusy=false; el.className='hidden'; if(toastHold){ const h=toastHold; toastHold=null; showToast(h); } return; }
+  if(!it){ cutBusy=false; el.className='hidden'; pumpToast(); return; }
   cutBusy=true; cutSound(it); const a=it.amt? (it.amt>0?'+':'−')+yenS(Math.abs(it.amt)) : '';
   el.innerHTML=`<div class="band"></div><div class="ccard"><img src="${cimg(it)}" alt=""><div class="txt">${it.who?`<span class="who" style="background:${it.col}">${esc(it.who)}</span>`:''}<div class="ttl">${it.ttl}</div>${a?`<div class="amt">${a}</div>`:''}</div></div>`;
   el.className=it.good?'good':'bad'; void el.offsetWidth; el.classList.add('on');
@@ -1583,7 +1593,14 @@ function showResult(){
     t+= i===0?3200:1800; }
   later(t,final);
 }
-function showToast(html){ if(cutBusy){ toastHold=html; return; } const t=$('toast'); t.innerHTML=html; t.classList.add('show'); clearTimeout(toastTm); toastTm=setTimeout(()=>t.classList.remove('show'),2300); }
+const toastQ=[]; let toastOn=false;
+function showToast(html){ if(toastQ.length>=4) toastQ.shift(); toastQ.push(html); pumpToast(); }
+function pumpToast(){ if(toastOn||!toastQ.length) return; const ph=state&&state.phase;
+  if(cutBusy||cutQ.length||ph==='settle'||ph==='roulette'||ph==='end'||!$('turnCut').classList.contains('hidden')){ return; }
+  const html=toastQ.shift(), t=$('toast'); toastOn=true; t.innerHTML=html; t.classList.add('show'); clearTimeout(toastTm);
+  const ms=Math.min(4200,1800+html.replace(/<[^>]+>/g,'').length*45);
+  toastTm=setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>{ toastOn=false; pumpToast(); },300); },ms); }
+setInterval(()=>pumpToast(),400);
 
 function renderModal(myTurn){
   const M=$('modal'), C=$('mcard'); let html='', center=false;
@@ -1622,7 +1639,7 @@ function renderModal(myTurn){
     <div class="chips">${[cp].map(p=>{ const a=q.answers[p.id];
       const mark = rev ? (a&&a.c===q.ans?'⭕':'❌') : (a?'✔':'…');
       return `<span class="chip" style="background:${p.color}">${mark} ${esc(p.name)}</span>`; }).join('')}</div>
-    ${side&&!rev?`<div class="sidebox">${my?`🤫 こっそり回答済み（当たれば +${yen(SIDE_PRIZE*q.lv)}）`:`🤫 ${esc(cp.name)} が回答中…<br>こっそり答えて当たれば <b>+${yen(SIDE_PRIZE*q.lv)}</b>`}</div>`:''}
+    ${side&&!rev?`<div class="sidebox">${my?`🤫 こっそり回答済み（当たれば +${yen(q.sp||SIDE_PRIZE*q.lv)}）`:`🤫 ${esc(cp.name)} が回答中…<br>こっそり答えて当たれば <b>+${yen(q.sp||SIDE_PRIZE*q.lv)}</b>`}</div>`:''}
     ${!meP&&!rev?`<div class="sub">👀 ${esc(cp.name)} が回答中…</div>`:''}
     ${rev&&q.side&&q.side.length?`<div class="sidebox">🤫 こっそり正解：${esc(q.side.join('・'))}（各+${yen(q.prize)}）</div>`:''}
     ${rev&&side&&my&&my.c!==q.ans?`<div class="sub">🤫 こっそり回答はハズレ…</div>`:''}
@@ -2159,7 +2176,7 @@ cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
 cv.addEventListener('wheel',e=>{ e.preventDefault(); cam.tz=Math.max(0.15,Math.min(3,cam.tz*(e.deltaY<0?1.1:0.9))); },{passive:false});
 
 // テスト用フック
-window.__gdt={cutin,arrive,commit,endTurn,makeNews,binboAct,moveTick,get state(){return state;},ST,NEXT:ADJ,get DIST(){return DD();},DD,act,startHost,cam,cpuCheck,doRoulette};
+window.__gdt={assets,income,cutin,arrive,commit,endTurn,makeNews,binboAct,moveTick,get state(){return state;},ST,NEXT:ADJ,get DIST(){return DD();},DD,act,startHost,cam,cpuCheck,doRoulette};
 </script>
 </body>
 </html>
