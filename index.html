@@ -888,9 +888,9 @@ function moveTick(){
       }
       const to=m.next; m.next=null; m.prev=p.pos; p.pos=to;
       // 他の人がグラ廃神持ちのマスを通過・停止 → その人に乗り移る
-      if(state.binbo && state.binbo.pid!==p.id && !state.binbo.moved){ const h=P(state.binbo.pid); if(h && h.pos===to && !h.left){ state.binbo.moved=true; state.binbo.pid=p.id;
+      if(state.binbo && state.binbo.pid!==p.id && !state.binbo.moved){ const h=P(state.binbo.pid); if(h && h.pos===to && !h.left){ binboReset(); state.binbo.moved=true; state.binbo.pid=p.id;
         cutin('ui2/b_chase',p,`${BINBO_NAME}が<br>乗り移ってきた！`,0,false); addChat('👾','#888',`${p.name} が ${h.name} のマスを通ったため、${BINBO_NAME}が乗り移った！`); } }
-      else if(state.binbo && state.binbo.pid===p.id && !state.binbo.moved){ const oth=active().filter(x=>x!==p && x.pos===to); if(oth.length){ const t=oth[Math.floor(Math.random()*oth.length)]; state.binbo.moved=true; state.binbo.pid=t.id; cutin('ui2/b_chase',p,`なすりつけ成功！<br>→ ${esc(t.name)}`,0,true); addChat('👾','#888',`${p.name} が ${t.name} に${BINBO_NAME}をなすりつけた！`); } } p.trail.push(to); if(p.trail.length>300) p.trail.shift(); m.left--;
+      else if(state.binbo && state.binbo.pid===p.id && !state.binbo.moved){ const oth=active().filter(x=>x!==p && x.pos===to); if(oth.length){ const t=oth[Math.floor(Math.random()*oth.length)]; binboReset(); state.binbo.moved=true; state.binbo.pid=t.id; cutin('ui2/b_chase',p,`なすりつけ成功！<br>→ ${esc(t.name)}`,0,true); addChat('👾','#888',`${p.name} が ${t.name} に${BINBO_NAME}をなすりつけた！`); } } p.trail.push(to); if(p.trail.length>300) p.trail.shift(); m.left--;
       if(to===state.dest && !state.pendingRoulette && m.left>0 && !m.passed){ m.passed=true; cutin('ui2/passby',p,`${ST[to].n}を<br>通り過ぎた〜！`,0,false); }
       if(to===state.dest && !state.pendingRoulette && m.left===0){ arrive(p); } // ぴったり止まった時だけ到着（超える時は通過）
     } else {
@@ -977,16 +977,21 @@ function doBuy(p,k){
   commit();
 }
 // ===== グラ廃神（貧乏神役） =====
-const BINBO_NAME='グラ廃神';
+const BINBO_NAME='グラ廃神'; window.BINBO_NAME0=BINBO_NAME; const KING_AFTER=5;
+function binboReset(){ const bb=state.binbo; if(bb&&bb.king){ addChat('👾','#888',`キンググラ廃神は元の${BINBO_NAME}に戻った`); } if(bb){ bb.king=false; bb.n=0; } }
 function binboAttach(target,why){ if(!target) return; state.binbo={pid:target.id,moved:false,acted:-1};
   cutin('ui2/b_fall',target,`${BINBO_NAME}が<br>取りついた！`,0,false); addChat('👾','#888',`${BINBO_NAME}が ${target.name} に取りついた${why?'（'+why+'）':''}`); }
 // グラ廃神の悪さ：資産が多いほど被害が大きい（順位の入れ替わりを起こすため）。10%は気まぐれで何もしない
 function binboAct(p){
+  const bb=state.binbo; bb.n=(bb.n||0)+1;
+  if(!bb.king && bb.n>=KING_AFTER){ bb.king=true; cutin('ui3/kb_transform',p,`${window.BINBO_NAME0}が<br>キンググラ廃神に変身した！`,0,false,false,{big:1,dur:2600});
+    toast(`👑 ${p.name} のグラ廃神が<br>キンググラ廃神に変身！被害が1.5倍に`); addChat('👑','#888',`${p.name} に${KING_AFTER}手番取りついたグラ廃神がキンググラ廃神に変身！（被害1.5倍・誰かに移ると元に戻る）`); cutPause(500); }
+  const BINBO_NAME=bb.king?'キンググラ廃神':window.BINBO_NAME0;
   const A=Math.max(0,assets(p)), n=state.players.length, rk=rankOf(p);
-  const rf=n<2?1:1.3-0.7*rk/(n-1);           // 1位1.3倍 〜 最下位0.6倍
+  const rf=(n<2?1:1.3-0.7*rk/(n-1))*(bb.king?1.5:1);           // 1位1.3倍 〜 最下位0.6倍
   const r=Math.random(), cards=p.cards||[];
   const mine=Object.keys(state.owners).filter(k=>state.owners[k]===p.id).map(k=>{ const [st,kk]=k.split('-').map(Number); return {k,st,pr:ST[st].props[kk]}; });
-  const say=(t,amt,chat)=>{ cutin((-amt>A*0.12||/件を/.test(t)&&-amt>A*0.1)?'ui2/b_rage':'binbo/front',p,t,amt,false); addChat('👾','#888',chat); return true; };
+  const say=(t,amt,chat)=>{ cutin(bb.king?'ui3/kb_rage':(-amt>A*0.12||/件を/.test(t)&&-amt>A*0.1)?'ui2/b_rage':'binbo/front',p,t,amt,false); addChat('👾','#888',chat); return true; };
   if(r>=0.97){ if(Math.random()<0.5 && cards.length<CARD_MAX){ const rare=['tokkyu','oharai','baishu','shinkansen'].filter(k=>CARDS[k]); const k=rare.length?rare[Math.floor(Math.random()*rare.length)]:CARD_KEYS[Math.floor(Math.random()*CARD_KEYS.length)];
       (p.cards=cards).push(k); cutin('ui3/b_gift',p,`${BINBO_NAME}が照れながら<br>${CARDS[k].n}をくれた！`,0,true,false,{fb:'binbo/front'}); addChat('👾','#888',`${BINBO_NAME}：${p.name} に ${CARDS[k].n} をプレゼント（気まぐれ）`); return true; }
     const amt=Math.max(1000,Math.round(A*0.05/100)*100); p.money+=amt; cutin('ui3/b_gift',p,`${BINBO_NAME}が照れながら<br>おこづかいをくれた！`,amt,true,false,{fb:'binbo/front'}); addChat('👾','#888',`${BINBO_NAME}：${p.name} に ${yen(amt)} をプレゼント（気まぐれ）`); return true; }
@@ -1339,7 +1344,7 @@ function render(){
   const head=`<div class="head"><span>🏁 ${state.goalsDone}/${state.goalN}</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>`;
   if(false) $('plist').innerHTML=head+`<div class="strip">`+state.players.map((p,i)=>`<div class="pc ${i===state.cur&&state.phase!=='end'?'cur':''}"><span class="dot" style="background:${p.color}"></span><span class="nm">${esc(p.name)}</span><b class="${p.money<0?'neg':''}">${yenS(p.money)}</b></div>`).join('')+`</div>`;
   else $('plist').innerHTML=`<div class="head"><span>📅 ${state.month}ヶ月目（${calMonth()}月${SEASONS[seasonOf()].ic}）</span><span>🏁 目的地 ${state.goalsDone}/${state.goalN}${isHost?` <button class="gbtn" data-goal="-1">−</button><button class="gbtn" data-goal="1">＋</button>`:''}</span><span>🎯 ${state.dest!=null?ST[state.dest].n:'？'}</span><span>決算まで${SETTLE_EVERY-(state.month%SETTLE_EVERY)}ヶ月</span></div>${state.news?`<div class="newsl ${state.news.good?'g':'b'}">📰 ${esc(state.news.eff)}（次の決算まで）</div>`:''}${Object.keys(state.titles||{}).length?`<div class="titl">${Object.entries(state.titles).map(([g,id])=>{ const q=P(id); return q?`<span style="background:${q.color}">${PG[g].ic}${PG[g].n}：${esc(q.name)}</span>`:''; }).join('')}</div>`:''}`
-   state.players.map((p,i)=>`<div class="row ${i===state.cur&&state.phase!=='end'?'cur':''}"><img class="pic" src="${iconOf(p)}" style="border-color:${p.color}"><span class="nm">${p.away?'📶':p.cpu?'🤖':''}${esc(p.name)}${state.binbo&&state.binbo.pid===p.id?'👾':''}</span>
+   state.players.map((p,i)=>`<div class="row ${i===state.cur&&state.phase!=='end'?'cur':''}"><img class="pic" src="${iconOf(p)}" style="border-color:${p.color}"><span class="nm">${p.away?'📶':p.cpu?'🤖':''}${esc(p.name)}${state.binbo&&state.binbo.pid===p.id?(state.binbo.king?'👑👾':'👾'):''}</span>
    <span>${ST[p.pos].n}</span><span class="left">${state.dest!=null?'(あと'+DD()[p.pos]+')':''}</span>${p.rest?'🌀':''}${p.express?'🎫':''}${p.lucky?'🍀':''}
    ${(p.cards||[]).length?`<span title="カード">🃏${p.cards.length}</span>`:''}<span class="mon ${p.money<0?'neg':''}">${yen(p.money)}</span></div>`).join('')+`<div class="more">タップで閉じる</div>`;
   // 行動ボタン
@@ -1523,7 +1528,7 @@ BAND_OF.forEach(k=>{ const a=new Image(); a.src='ui/band_'+k+'.webp'; const b=ne
 let lastCutId=null, cutQ=[], cutBusy=false, toastHold=null;
 function feedCutins(c){ if(lastCutId===null){ lastCutId=c?c.n:0; return; } if(!c) return; c.items.filter(it=>it.id>lastCutId).forEach(it=>{ const L=cutQ[cutQ.length-1]; if(L&&L.img==='ui/buy'&&it.img==='ui/buy'&&L.who===it.who){ L.n=(L.n||1)+1; L.amt+=it.amt; L.ttl=`物件を${L.n}件<br>購入！`; } else cutQ.push({...it}); }); lastCutId=c.n; if(!cutBusy) playCut(); }
 const SMALL_CUT=new Set(['ui2/map','ui/ok','ui/ng','ui/buy','ui/toll','ui/stealfail','express','typhoon','fest']);
-const CUT_SND={'ui3/b_gift':'good','ui3/news_good':'turn','ui3/news_bad':'bad','ui3/lastdest':'fanfare','ui3/finalsettle':'fanfare','ui3/rich2':'coin','ui3/rich5':'coin','ui3/rich10':'fanfare','ui3/s_spring':'good','ui3/s_summer':'good','ui3/s_autumn':'good','ui3/s_winter':'ng','ui2/goal':'fanfare','ui2/bonus':'coin','ui2/b_fall':'binbo','ui2/b_chase':'binbo','ui2/b_rage':'binbo','ui2/b_sleep':'pop','ui2/b_broom':'good','ui2/streak':'good','ui2/crown':'fanfare','ui2/mud':'good','ui2/coins':'coin','ui2/card':'card','ui2/stolen':'bad','ui2/passby':'ng','ui2/seized':'lose','ui2/map':'stop','ui/ok':'ok','ui/ng':'ng','ui/buy':'coin','ui/toll':'lose','ui/stealfail':'ng',express:'card',typhoon:'bad',fest:'coin',arrive:'fanfare',mono:'fanfare',steal:'good',settle:'coin','ui/startband':'fanfare','ui/lastmonth':'turn','binbo/front':'binbo'};
+const CUT_SND={'ui3/kb_transform':'binbo','ui3/kb_rage':'binbo','ui3/b_gift':'good','ui3/news_good':'turn','ui3/news_bad':'bad','ui3/lastdest':'fanfare','ui3/finalsettle':'fanfare','ui3/rich2':'coin','ui3/rich5':'coin','ui3/rich10':'fanfare','ui3/s_spring':'good','ui3/s_summer':'good','ui3/s_autumn':'good','ui3/s_winter':'ng','ui2/goal':'fanfare','ui2/bonus':'coin','ui2/b_fall':'binbo','ui2/b_chase':'binbo','ui2/b_rage':'binbo','ui2/b_sleep':'pop','ui2/b_broom':'good','ui2/streak':'good','ui2/crown':'fanfare','ui2/mud':'good','ui2/coins':'coin','ui2/card':'card','ui2/stolen':'bad','ui2/passby':'ng','ui2/seized':'lose','ui2/map':'stop','ui/ok':'ok','ui/ng':'ng','ui/buy':'coin','ui/toll':'lose','ui/stealfail':'ng',express:'card',typhoon:'bad',fest:'coin',arrive:'fanfare',mono:'fanfare',steal:'good',settle:'coin','ui/startband':'fanfare','ui/lastmonth':'turn','binbo/front':'binbo'};
 function cutSound(it){ const k=CUT_SND[it.img]||(/^b\d/.test(it.img)?'good':/^r\d/.test(it.img)?'bad':(it.good?'good':'bad')); SFX.play(k); }
 const IMG_MISS=new Set();
 const UI3=['t_'+'ramen','b_gift','s_spring','s_summer','s_autumn','s_winter','news_good','news_bad','lastdest','rich2','rich5','rich10','finalsettle'];
@@ -2083,7 +2088,7 @@ function frame(now){
   drawChoiceArrows(t);
 }
 // グラ廃神の描画（取りついた人の電車のそばを歩く）
-const BIN_IMG={}; ['front','walk1','walk2','walk3','walk4','walk5','walk6','walk7','walk8'].forEach(k=>{ const im=new Image(); im.src='binbo/'+k+'.webp'; BIN_IMG[k]=im; });
+const BIN_IMG={}, KBIN_IMG={}; ['front','walk1','walk2','walk3','walk4','walk5','walk6','walk7','walk8'].forEach(k=>{ const im=new Image(); im.src='binbo/'+k+'.webp'; BIN_IMG[k]=im; const km=new Image(); km.src='kbinbo/'+k+'.webp'; KBIN_IMG[k]=km; });
 let binDisp=null;
 function drawBinbo(t){
   if(!state||!state.binbo||state.phase==='lobby') return; const p=P(state.binbo.pid); if(!p) return; const dp=disp[p.id]; if(!dp) return;
@@ -2091,7 +2096,7 @@ function drawBinbo(t){
   if(!binDisp) binDisp={x:tx,y:ty,flip:false};
   const dx=tx-binDisp.x, dy=ty-binDisp.y, moving=Math.hypot(dx,dy)>1; if(Math.abs(dx)>0.6) binDisp.flip=dx<0;
   binDisp.x+=dx*0.12; binDisp.y+=dy*0.12;
-  const [x,y]=w2s(binDisp.x,binDisp.y); const k=moving?'walk'+(1+Math.floor(t/90)%8):'front'; const im=BIN_IMG[k]; if(!im||!im.complete||!im.naturalWidth) return;
+  const [x,y]=w2s(binDisp.x,binDisp.y); const k=moving?'walk'+(1+Math.floor(t/90)%8):'front'; const im=(state.binbo&&state.binbo.king?KBIN_IMG:BIN_IMG)[k]; if(!im||!im.complete||!im.naturalWidth) return;
   const h=46*DPR*Math.min(1.3,Math.max(0.7,cam.z)), w=h*im.naturalWidth/im.naturalHeight, bob=moving?0:Math.sin(t/300)*2*DPR;
   ctx.save(); ctx.globalAlpha=0.35; ctx.fillStyle='#000'; ctx.beginPath(); ctx.ellipse(x,y+2*DPR,w*0.35,h*0.08,0,0,7); ctx.fill(); ctx.restore();
   ctx.save(); ctx.translate(x,y-h+bob); if(moving&&binDisp.flip){ ctx.scale(-1,1); } ctx.shadowColor='rgba(170,60,255,.8)'; ctx.shadowBlur=10*DPR; ctx.drawImage(im,-w/2,0,w,h); ctx.restore();
@@ -2154,7 +2159,7 @@ cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
 cv.addEventListener('wheel',e=>{ e.preventDefault(); cam.tz=Math.max(0.15,Math.min(3,cam.tz*(e.deltaY<0?1.1:0.9))); },{passive:false});
 
 // テスト用フック
-window.__gdt={cutin,arrive,commit,endTurn,makeNews,moveTick,get state(){return state;},ST,NEXT:ADJ,get DIST(){return DD();},DD,act,startHost,cam,cpuCheck,doRoulette};
+window.__gdt={cutin,arrive,commit,endTurn,makeNews,binboAct,moveTick,get state(){return state;},ST,NEXT:ADJ,get DIST(){return DD();},DD,act,startHost,cam,cpuCheck,doRoulette};
 </script>
 </body>
 </html>
