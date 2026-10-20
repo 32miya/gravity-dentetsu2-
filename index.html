@@ -75,7 +75,7 @@ button{font-family:inherit;cursor:pointer;border:0}
 #hostNote{position:fixed;left:50%;top:calc(70px + env(safe-area-inset-top));transform:translateX(-50%);z-index:31;background:linear-gradient(#fff6c8,#ffd84a);color:#2b2420;border:3px solid #2b2420;border-radius:16px;padding:10px 18px;font-size:17px;font-weight:bold;box-shadow:0 6px 0 rgba(0,0,0,.25);text-align:center;width:max-content;max-width:92vw;animation:hnin .35s cubic-bezier(.2,1.5,.4,1)}
 @keyframes hnin{from{transform:translateX(-50%) scale(.5);opacity:0}}
 #recon{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:40;background:#fff;border:4px solid #2b2420;border-radius:18px;padding:14px 18px;text-align:center;font-size:15px;box-shadow:0 8px 20px rgba(0,0,0,.4);width:min(90vw,380px)}
-#destTag{position:fixed;left:8px;top:calc(8px + env(safe-area-inset-top));z-index:5;background:rgba(255,255,255,.92);border:2px solid #f0b400;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:bold;box-shadow:0 2px 5px rgba(0,0,0,.25);pointer-events:none}
+#destTag{position:fixed;left:64px;top:calc(8px + env(safe-area-inset-top));z-index:5;background:rgba(255,255,255,.92);border:2px solid #f0b400;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:bold;box-shadow:0 2px 5px rgba(0,0,0,.25);pointer-events:none}
 #tools button.on{background:#fff1c4;box-shadow:inset 0 0 0 3px #f0b400}
 #plist{top:calc(8px + env(safe-area-inset-top))!important}
 #tools button{width:44px;height:44px;border-radius:50%;background:#fff;font-size:20px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
@@ -848,7 +848,7 @@ function startQuiz(){
   const removed=shuffle([0,1,2,3].filter(i=>i!==ans)).slice(0,2);
   state.quizSeq=(state.quizSeq||0)+1;
   state.quiz={id:state.quizSeq,q:src[0],choices,ans,st:st.n,d,lv,limit:QUIZ_SEC,answers:{},order:0,
-    hint:p.lucky?[p.id]:[],removed,revealed:false,sp:sidePrize(lv)};
+    hint:p.lucky?[p.id]:[],removed,revealed:false,sp:sidePrize(lv),t0:Date.now()};
   state.phase='quiz'; state.msg=`【${st.n}の${GENRES[lv].i}${GENRES[lv].n}】${p.name} が挑戦！`;
   commit();
   clearTimeout(quizTimer); quizTimer=setTimeout(revealQuiz,QUIZ_SEC*1000+2500);
@@ -856,8 +856,12 @@ function startQuiz(){
 function doAnswer(p,v){
   const q=state.quiz; q.answers[p.id]={c:v,o:++q.order};
   commit();
-  if(p===curP()){ clearTimeout(quizTimer); quizTimer=setTimeout(revealQuiz,700); }
+  if(q.answers[curP().id]){ clearTimeout(quizTimer); quizTimer=setTimeout(revealQuiz,revealWait(q)); }
 }
+// 手番の人が答えても、こっそり回答できる人間のプレイヤーが残っていれば最低12秒は待つ
+const SIDE_MIN=12000;
+function revealWait(q){ const cp=curP(); const wait=active().some(x=>x!==cp&&!x.cpu&&!x.away&&!q.answers[x.id]);
+  return wait? Math.max(700, (q.t0||0)+SIDE_MIN-Date.now()) : 700; }
 function revealQuiz(){
   const q=state.quiz; if(!q||q.revealed||state.phase!=='quiz') return; q.revealed=true;
   const d=q.d, okN=[]; state.moves={};
@@ -1654,8 +1658,9 @@ function renderModal(myTurn){
     <div class="chips">${[cp].map(p=>{ const a=q.answers[p.id];
       const mark = rev ? (a&&a.c===q.ans?'⭕':'❌') : (a?'✔':'…');
       return `<span class="chip" style="background:${p.color}">${mark} ${esc(p.name)}</span>`; }).join('')}</div>
-    ${side&&!rev?`<div class="sidebox">${my?`🤫 こっそり回答済み（当たれば +${yen(q.sp||SIDE_PRIZE*q.lv)}）`:`🤫 ${esc(cp.name)} が回答中…<br>こっそり答えて当たれば <b>+${yen(q.sp||SIDE_PRIZE*q.lv)}</b>`}</div>`:''}
+    ${side&&!rev?`<div class="sidebox">${!my&&q.answers[cp.id]?`<b>✔ ${esc(cp.name)} は回答済み！</b><br>`:''}${my?`🤫 こっそり回答済み（当たれば +${yen(q.sp||SIDE_PRIZE*q.lv)}）`:`🤫 ${esc(cp.name)} が回答中…<br>こっそり答えて当たれば <b>+${yen(q.sp||SIDE_PRIZE*q.lv)}</b>`}</div>`:''}
     ${!meP&&!rev?`<div class="sub">👀 ${esc(cp.name)} が回答中…</div>`:''}
+    ${!side&&meP&&my&&!rev?`<div class="sub">⏳ みんなのこっそり回答を待っています…</div>`:''}
     ${rev&&q.side&&q.side.length?`<div class="sidebox">🤫 こっそり正解：${esc(q.side.join('・'))}（各+${yen(q.prize)}）</div>`:''}
     ${rev&&side&&my&&my.c!==q.ans?`<div class="sub">🤫 こっそり回答はハズレ…</div>`:''}
     <div class="repwrap">${reported[q.id]?'<span class="repdone">🚩 報告しました。ありがとう！</span>':repOpen===q.id?`<div class="reps">${REP_REASONS.map((r,i)=>`<button data-rep="${i}">${r}</button>`).join('')}</div>`:'<button class="rep" data-repopen="1">🚩 この問題おかしい？</button>'}</div>`;
