@@ -1017,7 +1017,7 @@ function titleCheck(){ state.titles=state.titles||{}; const C={}; state.players.
     toast(`${g.ic} ${w.name} が「${g.n}」に！<br>${g.t}物件の収益2倍`); addChat(g.ic,'#888',`${w.name} が「${g.n}」の称号を獲得（${g.t} ${best}件）`); } }
 const RICH=[[20000,'rich2','2億'],[50000,'rich5','5億'],[100000,'rich10','10億']];
 function richCheck(){ state.players.forEach(p=>{ for(let i=RICH.length-1;i>=0;i--){ const [th,key,lb]=RICH[i]; if(p.money>=th && (p.richLv||0)<=i){ p.richLv=i+1;
-  cutin('ui3/'+key,p,`所持金${lb}円<br>突破！`,0,true,false,{dur:2000,fb:'ui2/coins'}); addChat('💴','#888',`${p.name} の所持金が${lb}円を突破！`); break; } } }); }
+  cutin('ui3/'+key,p,`所持金${lb}円<br>突破！`,0,true,false,Object.assign({dur:2000,fb:'ui2/coins'},i===2?{big:1,dur:2600}:{})); addChat('💴','#888',`${p.name} の所持金が${lb}円を突破！`); break; } } }); }
 function seasonChange(){ const se=seasonOf(); if(state.season===se) return; state.season=se; const S=SEASONS[se];
   cutin('ui3/s_'+se,null,`${S.ic}${S.n}がやってきた！`,0,true,false,{dur:2000,fb:'cuts/fest'}); toast(`${S.ic} ${calMonth()}月・${S.n}<br>${S.d}`); addChat(S.ic,'#888',`${S.n}になった：${S.d}`); }
 function makeNews(){ if(state.news || Math.random()>0.45) return; const nextSettle=Math.ceil((state.month+1)/SETTLE_EVERY)*SETTLE_EVERY; const t=Math.random(); let nw;
