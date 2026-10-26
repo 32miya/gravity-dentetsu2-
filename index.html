@@ -602,7 +602,9 @@ async function loadQuestions(){
   try{
     const base=new URL('questions/',location.href);
     const idx=await (await fetch(new URL('index.json',base),{cache:'no-cache'})).json();
-    for(const f of idx){ try{ addQuestions(await (await fetch(new URL(f,base),{cache:'no-cache'})).json(), f); }catch(e){ qLoadInfo.files.push(f+'(読込失敗)'); } }
+    // 並列で取得し、index.json の順番どおりに登録（問題数が多くても起動が遅くならないように）
+    const got=await Promise.all(idx.map(f=>fetch(new URL(f,base),{cache:'no-cache'}).then(r=>r.json()).catch(()=>null)));
+    got.forEach((d,i)=>{ if(d) addQuestions(d, idx[i]); else qLoadInfo.files.push(idx[i]+'(読込失敗)'); });
   }catch(e){}
   if(!QPOOL.length) addQuestions(BUILTIN_Q,'内蔵');
   showQInfo();
